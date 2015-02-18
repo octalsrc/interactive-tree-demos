@@ -49,16 +49,17 @@ prepTree' = prepTree
 prepTree :: Show a 
          => Handler (QualTree a) 
          -> Layout (BiTree a) String
-prepTree f tree = trec f (top tree) (450,50)
+prepTree f tree = trec f (top tree) (450,50) Red
 
 trec :: Show a
      => Handler (QualTree a) 
      -> QualTree a 
      -> (Double, Double)
-     -> (Double, Double)
+     -> Color
+     -> (Double, Double) 
      -> Plate String
-trec _ (EmptyTree, _   ) _   _  = []
-trec f (BiNode l v r, c) pre sc = 
+trec _ (EmptyTree, _   ) _   _   _  = []
+trec f (BiNode l v r, c) pre col sc = 
   let tree = (BiNode l v r, c)
       loc = compLoc tree pre
       prevOffset = let (px,py) = pre
@@ -66,17 +67,17 @@ trec f (BiNode l v r, c) pre sc =
                    in ( px - lx , py - ly )
       shape = Shape (show v)
                     confSize'
-                    (tPrims confSize prevOffset)
+                    (tPrims col confSize prevOffset)
                     loc
                     [OnClick (return tree >>= f)]
-  in (trec f (qtLeft tree) loc sc) 
-     ++ (trec f (qtRight tree) loc sc)
+  in (trec f (qtLeft tree) loc (advc col) sc) 
+     ++ (trec f (qtRight tree) loc ((advc . advc) col) sc)
      ++ [(scale sc shape)]
 
-tPrims :: Double -> (Double, Double) -> [Primitive]
-tPrims cs pr = [ Line (0,0) pr 2
-               , Circle (0,0) cs True
-               ]
+tPrims :: Color -> Double -> (Double, Double) -> [Primitive]
+tPrims col cs pr = [ Line (0,0) pr 2
+                   , Circle (0,0) cs True col
+                   ]
 
 
 compLoc :: QualTree a -> (Double, Double) -> (Double, Double)

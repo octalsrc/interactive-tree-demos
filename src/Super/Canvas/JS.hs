@@ -23,11 +23,11 @@ getMousePos ev = do x <- ffiGetMX ev
                     return (fromIntegral x, fromIntegral y)
 
 drawPrim :: (Double, Double) -> Context -> Primitive -> IO ()
-drawPrim (x,y) c (Circle (xo,yo) r f) =
-  do 
+drawPrim (x,y) c (Circle (xo,yo) r f col) =
+  do let (rc, gc, bc) = style col
      putStrLn ("Drawing a circle...")
      beginPath c 
-     fillStyle 255 255 255 255 c
+     fillStyle rc gc bc 255 c
      strokeStyle 255 255 255 255 c
      arc (x + xo) (y + yo) r 0 (2 * pi) True c
      if f
@@ -42,10 +42,15 @@ drawPrim (x,y) c (Line (xo,yo) (xd,yd) w) =
      moveTo (x + xo) (y + yo) c
      lineTo (x + xd) (y + yd) c
      lineWidth w c
-     strokeStyle 255 255 255 255 c
+     strokeStyle 0 0 0 255 c
      stroke c
      
      return ()
+
+style Red = (255, 0, 0)
+style Green = (0, 190, 0)
+style Blue = (0, 0, 230)
+style Yellow = (255, 170, 0)
 
 drawShape :: Context -> Shape a -> IO ()
 drawShape c (Shape _ _ prims coords _) = 

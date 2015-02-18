@@ -2,15 +2,22 @@ module Super.Canvas.Types ( Primitive (..)
                           , Shape (..)
                           , Layout (..)
                           , Scale (..)
+                          , Color (..)
                           , scale
+                          , advc
                           , actio
                           , getActions
                           , QualAction (..)
                           , Plate (..) 
                           , Action (..) ) where
 
+data Color = Red | Green | Blue | Yellow deriving (Show, Enum)
+
+advc Yellow = Red
+advc c = succ c
+
 data Primitive = -- offset, radius, fill
-                 Circle (Double,Double) Double Bool
+                 Circle (Double,Double) Double Bool Color
                  -- offset-start, offset-dest, lthick
                | Line (Double,Double) (Double,Double) Double
 
