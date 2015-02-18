@@ -1,5 +1,10 @@
 module Super.Canvas.Trees ( BiTree (..)
+                          , QualTree (..)
+                          , BTContext (..)
+                          , top
+                          , qtUpMost
                           , sampleTree
+                          , rotate
                           , prepTree
                           , prepTree' ) where
 
@@ -38,16 +43,16 @@ confSize = 10
 confSize' = (confSize, confSize)
 
 
-prepTree' :: Handler (BiTree Int) -> Layout (BiTree Int) String
+prepTree' :: Handler (QualTree Int) -> Layout (BiTree Int) String
 prepTree' = prepTree
 
 prepTree :: Show a 
-         => Handler (BiTree a) 
+         => Handler (QualTree a) 
          -> Layout (BiTree a) String
-prepTree f tree = trec f (top tree) (0,0)
+prepTree f tree = trec f (top tree) (450,50)
 
 trec :: Show a
-     => Handler (BiTree a) 
+     => Handler (QualTree a) 
      -> QualTree a 
      -> (Double, Double)
      -> (Double, Double)
@@ -58,12 +63,12 @@ trec f (BiNode l v r, c) pre sc =
       loc = compLoc tree pre
       prevOffset = let (px,py) = pre
                        (lx,ly) = loc
-                   in ( lx - px , ly - py )
+                   in ( px - lx , py - ly )
       shape = Shape (show v)
                     confSize'
                     (tPrims confSize prevOffset)
                     loc
-                    [OnClick (return (fst (rotate tree)) >>= f)]
+                    [OnClick (return tree >>= f)]
   in (trec f (qtLeft tree) loc sc) 
      ++ (trec f (qtRight tree) loc sc)
      ++ [(scale sc shape)]
@@ -76,17 +81,17 @@ tPrims cs pr = [ Line (0,0) pr 2
 
 compLoc :: QualTree a -> (Double, Double) -> (Double, Double)
 compLoc (t, L v c r) (x,y) = 
-  let (nx,ny) = compLocH x y t r
-  in ( (-1) * nx , ny )
+  let (nx,ny) = compLocH x y t r (-1)
+  in ( nx , ny )
 compLoc (t, R l v c) (x,y) =
-  let (nx,ny) = compLocH x y t l
+  let (nx,ny) = compLocH x y t l (1)
   in ( nx , ny )
 compLoc (t, Top) (x,y) = (x,y)
 
-compLocH x y t o = 
-  ( y + confSize
-  , confSize * (fromIntegral ( (depth t) ^ (2 :: Int)
-                               + (depth o) ^ (2 :: Int))) )
+compLocH x y t o m = 
+  ( x + m * confSize * (fromIntegral ( (depth t) ^ (2 :: Int)
+                        + (depth o) ^ (2 :: Int)))
+  , y + confSize * 2 )
 
 depth :: BiTree a -> Int
 depth EmptyTree = 0
