@@ -1,4 +1,7 @@
-module Super.Canvas.JS (drawPlate) where
+{-# LANGUAGE CPP, ForeignFunctionInterface, JavaScriptFFI #-}
+
+module Super.Canvas.JS ( drawPlate
+                       , getMousePos ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -14,34 +17,38 @@ cx = select (pack "#thecanvas")
      >>= indexArray 0 . castRef 
      >>= getContext
 
+getMousePos :: Event -> IO (Double, Double)
+getMousePos ev = do x <- ffiGetMX ev
+                    y <- ffiGetMY ev
+                    return (fromIntegral x, fromIntegral y)
+
 drawPrim :: (Double, Double) -> Context -> Primitive -> IO ()
-drawPrim (x,y) c (Circle r f) =
+drawPrim (x,y) c (Circle (xo,yo) r f) =
   do 
      putStrLn ("Drawing a circle...")
      beginPath c 
      fillStyle 255 255 255 255 c
      strokeStyle 255 255 255 255 c
-     arc x y r 0 (2 * pi) True c
+     arc (x + xo) (y + yo) r 0 (2 * pi) True c
      if f
         then fill c
-        else stroke c
-     
+        else stroke c 
      return ()
-drawPrim (x,y) c (Line a b l) =
+drawPrim (x,y) c (Line (xo,yo) (xd,yd) w) =
   do 
      putStrLn ("Drawing a line...")
      
      beginPath c
-     moveTo x y c
-     lineTo a b c
-     lineWidth 5 c
+     moveTo (x + xo) (y + yo) c
+     lineTo (x + xd) (y + yd) c
+     lineWidth w c
      strokeStyle 255 255 255 255 c
      stroke c
      
      return ()
 
 drawShape :: Context -> Shape a -> IO ()
-drawShape c (Shape _ prims coords) = 
+drawShape c (Shape _ _ prims coords _) = 
   foldr (\p r -> drawPrim coords c p >> r) (return ()) prims
 
 drawPlate :: Plate b -> IO ()
@@ -53,3 +60,9 @@ drawPlate ss =
      foldr (\s r -> drawShape c s >> r) (return ()) ss
      restore c
      return ()
+
+foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
+   ffiGetMX :: JavaScript.JQuery.Event -> IO Int
+
+foreign import javascript safe "$r = $1.clientY - document.getElementById(\"thecanvas\").getBoundingClientRect().top;"
+   ffiGetMY :: JavaScript.JQuery.Event -> IO Int

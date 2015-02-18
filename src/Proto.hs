@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, JavaScriptFFI #-}
-
 import Reactive.Banana
 import Reactive.Banana.Frameworks
 
@@ -94,8 +92,4 @@ drawBig c (x,y) =
      return ()
      
 
-foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
-   ffiGetMX :: JavaScript.JQuery.Event -> IO Int
 
-foreign import javascript safe "$r = $1.clientY - document.getElementById(\"thecanvas\").getBoundingClientRect().top;"
-   ffiGetMY :: JavaScript.JQuery.Event -> IO Int
