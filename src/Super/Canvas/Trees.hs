@@ -89,8 +89,11 @@ compLoc (t, R l v c) (x,y) =
 compLoc (t, Top) (x,y) = (x,y)
 
 compLocH x y t o m = 
-  ( x + m * confSize * (fromIntegral ( (depth t) ^ (2 :: Int)
-                        + (depth o) ^ (2 :: Int)))
+  ( x
+    + m * 
+     ( (confSize / 2) + confSize 
+      * (fromIntegral ( (depth t) ^ (2 :: Int)
+                       + (depth o) ^ (2 :: Int)) / 2))
   , y + confSize * 2 )
 
 depth :: BiTree a -> Int
