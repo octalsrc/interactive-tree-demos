@@ -41,37 +41,35 @@ top      t                   = (t, Top)
 confSize = 10
 
 confSize' = (confSize, confSize)
+confSize'' = (confSize * 2, confSize * 2)
 
 
-prepTree' :: Handler (QualTree Int) -> Layout (BiTree Int) String
+prepTree' :: Handler (QualTree Color) -> Layout (BiTree Color) String
 prepTree' = prepTree
 
-prepTree :: Show a 
-         => Handler (QualTree a) 
-         -> Layout (BiTree a) String
-prepTree f tree = trec f (top tree) (450,50) Red
+prepTree :: Handler (QualTree Color) 
+         -> Layout (BiTree Color) String
+prepTree f tree = trec f (top tree) (450,50)
 
-trec :: Show a
-     => Handler (QualTree a) 
-     -> QualTree a 
-     -> (Double, Double)
-     -> Color
+trec :: Handler (QualTree Color) 
+     -> QualTree Color
+     -> (Double, Double) 
      -> (Double, Double) 
      -> Plate String
-trec _ (EmptyTree, _   ) _   _   _  = []
-trec f (BiNode l v r, c) pre col sc = 
-  let tree = (BiNode l v r, c)
+trec _ (EmptyTree, _   )   _   _  = []
+trec f (BiNode l col r, c) pre sc = 
+  let tree = (BiNode l col r, c)
       loc = compLoc tree pre
       prevOffset = let (px,py) = pre
                        (lx,ly) = loc
                    in ( px - lx , py - ly )
-      shape = Shape (show v)
-                    confSize'
+      shape = Shape (show col)
+                    confSize''
                     (tPrims col confSize prevOffset)
                     loc
                     [OnClick (return tree >>= f)]
-  in (trec f (qtLeft tree) loc (advc col) sc) 
-     ++ (trec f (qtRight tree) loc ((advc . advc) col) sc)
+  in (trec f (qtLeft tree) loc sc) 
+     ++ (trec f (qtRight tree) loc sc)
      ++ [(scale sc shape)]
 
 tPrims :: Color -> Double -> (Double, Double) -> [Primitive]
@@ -140,7 +138,8 @@ sampleTree n =
 
 -}
 
-sampleTree i = if i > 0
-                  then BiNode (sampleTree (i - 1)) 5
-                              (sampleTree (i - 1))
-                  else EmptyTree
+sampleTree i col = 
+  if i > 0
+     then BiNode (sampleTree (i - 1) (advc col)) col
+                 (sampleTree (i - 1) ((advc . advc) col))
+     else EmptyTree

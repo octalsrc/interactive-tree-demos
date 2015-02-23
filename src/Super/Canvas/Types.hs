@@ -6,6 +6,7 @@ module Super.Canvas.Types ( Primitive (..)
                           , scale
                           , advc
                           , actio
+                          , getIO
                           , getActions
                           , QualAction (..)
                           , Plate (..) 
@@ -20,6 +21,10 @@ data Primitive = -- offset, radius, fill
                  Circle (Double,Double) Double Bool Color
                  -- offset-start, offset-dest, lthick
                | Line (Double,Double) (Double,Double) Double
+                 -- offset, (width,height), text
+               | Text (Double,Double) (Double,Double) String
+                 -- offset-center, (width,height), fill
+               | Rekt (Double,Double) (Double,Double) Color
 
 data Shape b = Shape { thing   :: b
                      , bounds  :: (Double,Double)
@@ -33,6 +38,9 @@ actio (OnClick io) = io
 actio (MouseOver io) = io
 
 type QualAction = ((Double, Double), (Double, Double), Action)
+
+getIO (_,_,ac) = actio ac
+
 type Layout a b = (a -> Scale -> Plate b)
 
 type Scale = (Double, Double)

@@ -46,6 +46,14 @@ drawPrim (x,y) c (Line (xo,yo) (xd,yd) w) =
      stroke c
      
      return ()
+drawPrim (x,y) c (Rekt (xo,yo) (w,h) col) =
+  do let (rc, gc, bc) = style col
+     putStrLn ("Drawing a rekt...")
+     fillStyle rc gc bc 255 c
+     fillRect (x + xo) (y + yo) w h c
+     return ()
+drawPrim (x,y) c (Text (xo,yo) (w,h) s) =
+  drawTextCenter ((x + xo),(y + yo)) w h s c
 
 style Red = (255, 0, 0)
 style Green = (0, 190, 0)
@@ -65,6 +73,40 @@ drawPlate ss =
      foldr (\s r -> drawShape c s >> r) (return ()) ss
      restore c
      return ()
+
+type Coord = (Double, Double)
+
+drawTextCenter :: Coord   -- location at which to center the text
+               -> Double  -- maximum width of the text
+               -> Double  -- maximum height of the text
+               -> String  -- the text to be drawn
+               -> Context -- the canvas context
+               -> IO ()
+drawTextCenter (x,y) maxW maxH s c =
+  do (a,b) <- setFont maxH maxW s c
+     fillText (pack s) (x - (a / 2)) (y + (b / 2)) c
+
+-- same as drawTextCenter, but floors the text at the coordinates
+drawTextFloor :: Coord -> Double -> Double -> String -> Context -> IO ()
+drawTextFloor (x,y) maxW maxH s c =
+  do (a,_) <- setFont maxH maxW s c
+     fillText (pack s) (x - (a / 2)) y c
+
+setFont :: Double -> Double -> String -> Context -> IO (Double, Double)
+setFont maxHeight maxWidth s c = try maxWidth maxHeight s c
+
+fontPrecision = 6 -- size of steps taken when choosing a font
+panicSize = 1 -- size to choose if algorithm bottoms out
+try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
+                 x <- measureText (pack s) c
+                 if x > d
+                    then if x > 0
+                            then try d (f - fontPrecision) s c 
+                            else print ("hit bottom..") 
+                                 >> return (panicSize,f)
+                    else print (show (floor f)) >> return (x,f)
+
+
 
 foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
    ffiGetMX :: JavaScript.JQuery.Event -> IO Int
