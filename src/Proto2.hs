@@ -39,7 +39,7 @@ mkNet can c m i t fire =
      -- eKeys <- fromAddHandler i
      eTrees <- fromAddHandler t 
      let -- eRotatos = fmap (\t -> (fst . qtUpMost . rotate) t) eTrees
-         ePlates = fmap (\t -> prepTree' fire t (1,1)) eTrees
+         ePlates = fmap (\t -> prepTree' fire t) eTrees
          eActions = fmap (\as cs -> Prelude.filter (checkB cs) as) 
                          (fmap (onlyClicks . getActions) ePlates)
          bLive = stepper (const []) eActions

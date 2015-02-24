@@ -60,11 +60,11 @@ style Green = (0, 190, 0)
 style Blue = (0, 0, 230)
 style Yellow = (255, 170, 0)
 
-drawShape :: Context -> Shape a -> IO ()
-drawShape c (Shape _ _ prims coords _) = 
-  foldr (\p r -> drawPrim coords c p >> r) (return ()) prims
+drawShape :: Context -> Shape -> IO ()
+drawShape c (Shape _ coords ps _) = 
+  foldr (\p r -> drawPrim coords c p >> r) (return ()) ps
 
-drawPlate :: Plate b -> IO ()
+drawPlate :: Plate -> IO ()
 drawPlate ss = 
   do c <- cx
      save c
