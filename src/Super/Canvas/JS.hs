@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, ForeignFunctionInterface, JavaScriptFFI #-}
 
 module Super.Canvas.JS ( drawPlate
-                       , getMousePos ) where
+                       , attachHandlers ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -13,9 +13,20 @@ import JavaScript.JQuery
 
 import Super.Canvas.Types
 
-cx = select (pack "#thecanvas") 
+canvasName = "thecanvas"
+
+selp = select . pack
+
+sCanvas = selp ("#" ++ canvasName)
+
+cx = sCanvas 
      >>= indexArray 0 . castRef 
      >>= getContext
+
+attachHandlers c = do can <- sCanvas
+                      let h ev = c =<< getMousePos ev
+                      click h def can 
+                      return ()
 
 getMousePos :: Event -> IO (Double, Double)
 getMousePos ev = do x <- ffiGetMX ev
