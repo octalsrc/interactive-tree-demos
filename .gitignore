@@ -1,0 +1,8 @@
+*~
+dist/
+*.js
+.cabal-sandbox/
+cabal.sandbox.config
+
+GHCJS-JQuery/
+GHCJS-Canvas/
