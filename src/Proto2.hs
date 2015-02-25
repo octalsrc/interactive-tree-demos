@@ -14,29 +14,33 @@ main =
      network <- compile (mkNet (fst c) (fst t) (snd t))
      actuate network
      
-     return (sampleTree 4 Red) >>= (snd t)
+     return (prepTree (snd t) (sampleTree 4 Red)) >>= (snd t)
      putStrLn "Started?"
 
      return ()
 
+off = (450, 50)
+
 mkNet c t fire = 
   do eClicks <- fromAddHandler c 
      eTrees <- fromAddHandler t 
-     let ePlates = fmap (\t -> prepTree fire t) eTrees
-         eActions = fmap (\as cs -> Prelude.filter (checkB cs) as) 
+     let ePlates = eTrees -- fmap (\t -> prepTree fire t) eTrees
+         eActions = fmap (\as cs -> Prelude.filter (checkB cs off) as) 
                          (fmap (onlyClicks . getActions) ePlates)
          bLive = stepper (const []) eActions
          eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
      reactimate (fmap sequence_ eTriggered) 
-     reactimate (fmap drawPlate ePlates)
+     reactimate (fmap (drawPlate off) ePlates)
 
-onlyClicks = foldr (\(x,b,a) as -> case a of
-                                     OnClick _ -> (x,b,a):as
-                                     _         ->         as) []
+onlyClicks = filter (\a -> case a of
+                             (_,_,OnClick _) -> True
+                             _ -> False)
 
-
-checkB :: (Double, Double) -> QualAction -> Bool
-checkB (x,y) ((a,b),(w,h),_) = x >= a - w / 2
-                               && x <= (a + w / 2)
-                               && y >= b - h / 2
-                               && y <= (b + h / 2)
+checkB :: (Double, Double) -> (Double, Double) -> QualAction -> Bool
+checkB (xi,yi) (xo,yo) ((a,b),(w,h),_) = 
+  let x = xi - xo
+      y = yi - yo
+  in x >= a - w / 2
+     && x <= (a + w / 2)
+     && y >= b - h / 2
+     && y <= (b + h / 2) 

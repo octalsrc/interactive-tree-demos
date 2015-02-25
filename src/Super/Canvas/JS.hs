@@ -1,7 +1,9 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, JavaScriptFFI #-}
+{-# LANGUAGE CPP, FlexibleInstances, 
+    ForeignFunctionInterface, JavaScriptFFI #-}
 
 module Super.Canvas.JS ( drawPlate
-                       , attachHandlers ) where
+                       , attachHandlers
+                       , animate ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -9,7 +11,10 @@ import Data.Text (pack, unpack)
 import GHCJS.Foreign
 import GHCJS.Types
 import JavaScript.Canvas
-import JavaScript.JQuery
+import JavaScript.JQuery hiding (animate)
+
+import Control.Concurrent
+import Control.Monad
 
 import Super.Canvas.Types
 
@@ -71,17 +76,17 @@ style Green = (0, 190, 0)
 style Blue = (0, 0, 230)
 style Yellow = (255, 170, 0)
 
-drawShape :: Context -> Shape -> IO ()
-drawShape c (Shape _ coords ps _) = 
-  foldr (\p r -> drawPrim coords c p >> r) (return ()) ps
+drawShape :: Context -> Location -> Shape -> IO ()
+drawShape c l (Shape _ coords ps _) = 
+  foldr (\p r -> drawPrim (coords + l) c p >> r) (return ()) ps
 
-drawPlate :: Plate -> IO ()
-drawPlate ss = 
+drawPlate :: Location -> Plate -> IO ()
+drawPlate l ss = 
   do c <- cx
      save c
      clearRect 0 0 900 500 c
      
-     foldr (\s r -> drawShape c s >> r) (return ()) ss
+     foldr (\s r -> drawShape c l s >> r) (return ()) ss
      restore c
      return ()
 
@@ -117,7 +122,28 @@ try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
                                  >> return (panicSize,f)
                     else print (show (floor f)) >> return (x,f)
 
+instance Animate [Traveller] where
+  animate d s ts = let steps = fmap (calcStep s) ts
+                       qts = zip ts steps
+                       time = d `div` s
+                   in repeatM s (travel time) qts >> return ()
 
+travel :: Int -> [(Traveller, Vector)] -> IO [(Traveller, Vector)]
+travel time qts = 
+  let newqts = fmap (\((p,s,d),v) -> ((p,(s + v),d), v)) qts
+  in foldr (\((p,s,_),_) io -> io >> drawPlate s p) (return ()) qts
+     >> threadDelay (time * 1000)
+     >> return (newqts)
+
+-- I imagine this is already a function, but I couldn't find it...
+repeatM :: Monad m => Int -> (a -> m a) -> a -> m a
+repeatM n f v = if n > 0
+                   then f v >>= (repeatM (n - 1) f)
+                   else return v
+
+calcStep :: Int -> Traveller -> Vector
+calcStep s (_, start, end) = (end - start) / ( fromIntegral s
+                                             , fromIntegral s)
 
 foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
    ffiGetMX :: JavaScript.JQuery.Event -> IO Int

@@ -1,9 +1,15 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Super.Canvas.Types ( Primitive (..)
                           , Shape (..)
                           , Layout (..)
                           , Factor (..)
-                          , Location
+                          , Location (..)
+                          , Vector (..)
+                          , BoundingBox (..)
                           , Color (..)
+                          , Traveller (..)
+                          , Animate (..)
                           , scale
                           , nextColor
                           , actio
@@ -19,6 +25,20 @@ data Color = Red | Green | Blue | Yellow
 
 nextColor Yellow = Red
 nextColor c = succ c
+
+-- Be careful! this is not really a complete instance!
+instance Num (Double, Double) where
+  (+) (a,b) (c,d) = (a + c, b + d)
+  (-) (a,b) (c,d) = (a - c, b - d)
+  (*) (a,b) (c,d) = (a * c, b * d)
+  abs t = (abs (fst t), abs (snd t))
+  signum t = 0 -- signum ((fst t) * (snd t))
+  fromInteger x = (0,0) -- (fromInteger x, fromInteger x)
+
+-- Nor is this one! I'm just taking the operators and running!
+instance Fractional (Double, Double) where
+  (/) (a,b) (c,d) = (a / c, b / d)
+  fromRational x = (0,0) -- (x, x)
 
 type CanvasValue = (Double, Double)
 
@@ -80,3 +100,11 @@ scale f = fmap (scaleS f)
 
 translate :: Vector -> Plate -> Plate
 translate v = fmap (translateS v)
+
+class Animate a where
+  animate :: Int   -- duration of animation (ms)
+          -> Int   -- # frames of animation
+          -> a     -- thing to animate
+          -> IO () -- (blocking) animation action
+
+type Traveller = (Plate, Location, Location)

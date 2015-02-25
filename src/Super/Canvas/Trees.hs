@@ -12,6 +12,7 @@ import Control.Concurrent
 
 import Control.Event.Handler (Handler)
 
+import Super.Canvas.JS
 import Super.Canvas.Types
 
 confSize = 10
@@ -53,16 +54,16 @@ confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
 
 
-prepTree :: Handler (BiTree Color) 
+prepTree :: Handler (Plate) 
          -> Layout (BiTree Color)
 prepTree f tree = 
-  let rx = 450
-      ry = 50
+  let rx = 0
+      ry = 0
       (px,_) = compX 0 tree
       plate = trav f 0 ry (px,ry) (top tree)
   in translate (rx - px, 0) plate
 
-trav :: (Handler (BiTree Color)) -> Double -> Double
+trav :: (Handler (Plate)) -> Double -> Double
      -> Location -> QualTree Color -> [Shape]
 trav f lx y ploc (BiNode l col r, c) =
   let qt = (BiNode l col r, c)
@@ -72,19 +73,21 @@ trav f lx y ploc (BiNode l col r, c) =
       y' = advCY y 
       loc = (x,y)
       (px,py) = ploc
-      linedest = (px - x, py - y)
-      rotato = (fst . qtUpMost . rotate) qt 
+      linedest = (px - x, py - y) 
    in (trav f lx y' loc (qtLeft qt))
       ++ (trav f rx y' loc (qtRight qt)) 
       ++ [ Shape confSize'' 
                  loc 
                  (sketchNode col linedest)
-                 [OnClick (return rotato >>= f)] ]
+                 [OnClick (animate 1000 3 [((rotatos (\_ -> return ()) qt), (450::Double,50::Double), (670::Double,90::Double))] >> return (rotatos f qt) >>= f)] ]
 trav _ _ _ _ (EmptyTree, _) = []
-        
+
+rotatos f qt = prepTree f ((fst . qtUpMost . rotate) qt)
+
+
 {- Returns (x, x') such that 
      x  = the x coordinate of this node
-     x' = the x coordinate of the next leaf node -}
+     x' = the x coordinate of the next node to the right (any level) -}
 compX :: Double -> BiTree a -> (Double, Double)
 compX x (BiNode EmptyTree _ EmptyTree) = 
   (x, advCX x) -- leaf node case
