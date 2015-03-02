@@ -14,23 +14,28 @@ main =
      network <- compile (mkNet (fst c) (fst t) (snd t))
      actuate network
      
-     return (prepTree (snd t) (sampleTree 4 Red)) >>= (snd t)
+     return ([], sampleTree 5 Red) >>= (snd t)
      putStrLn "Started?"
 
      return ()
 
-off = (450, 50)
+off = (50, 50)
 
 mkNet c t fire = 
-  do eClicks <- fromAddHandler c 
-     eTrees <- fromAddHandler t 
-     let ePlates = eTrees -- fmap (\t -> prepTree fire t) eTrees
+  do eClicks <- fromAddHandler c
+     eTrees <- fromAddHandler t
+     let ePlates = fmap (\(tv,bt) -> (tv, prepTree fire bt)) eTrees
          eActions = fmap (\as cs -> Prelude.filter (checkB cs off) as) 
-                         (fmap (onlyClicks . getActions) ePlates)
+                         (fmap (onlyClicks . getActions . snd) ePlates)
          bLive = stepper (const []) eActions
          eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
      reactimate (fmap sequence_ eTriggered) 
-     reactimate (fmap (drawPlate off) ePlates)
+     reactimate (fmap (\(tv,p) -> trya tv >> drawPlate off p) ePlates)
+
+trya [] = return ()
+trya tv = animate 2000 4 (fmap (\(p,s,d) -> (p
+                                            ,(s + off)
+                                            ,(d + off))) tv)
 
 onlyClicks = filter (\a -> case a of
                              (_,_,OnClick _) -> True

@@ -7,21 +7,20 @@ module Super.Canvas.Trees ( BiTree (..)
                           , rotate
                           , prepTree ) where
 
-import System.IO.Unsafe
-import Control.Concurrent
+-- import Control.Concurrent
 
 import Control.Event.Handler (Handler)
 
-import Super.Canvas.JS
+-- import Super.Canvas.JS
 import Super.Canvas.Types
 
 confSize = 10
-advCX = (+ (1.5 * confSize))
-advCY = (+ (2.5 * confSize))
+distX = (1.5 * confSize)
+distY = (2.5 * confSize)
 
 sampleTree i col = 
   if i > 0
-     then BiNode (sampleTree (i - 1) (nextColor col)) col
+     then BiNode (sampleTree (i - 1) (nextColor col)) (True, col)
                  (sampleTree (i - 1) ((nextColor . nextColor) col))
      else EmptyTree
 
@@ -36,11 +35,14 @@ data BTContext a = Top
 
 type QualTree a = (BiTree a, BTContext a)
 
+type TreeShift = ([Traveller], BiTree (Bool, Color))
+
 qtLeft   (BiNode l v r, c)   = ( l, L v c r )
 qtRight  (BiNode l v r, c)   = ( r, R l v c )
 
 qtUp     (t, L v c r)        = (BiNode t v r, c)
 qtUp     (t, R l v c)        = (BiNode l v t, c)
+qtUp     (t, Top    )        = (t, Top         )
 
 qtUpMost :: QualTree a -> QualTree a
 qtUpMost (t, L v c r) = qtUpMost (BiNode t v r, c)
@@ -53,50 +55,98 @@ top t = (t, Top)
 confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
 
+prepTree :: Handler TreeShift
+         -> Layout (BiTree (Bool, Color))
+prepTree f tree = trav f (top tree)
 
-prepTree :: Handler (Plate) 
-         -> Layout (BiTree Color)
-prepTree f tree = 
-  let rx = 0
-      ry = 0
-      (px,_) = compX 0 tree
-      plate = trav f 0 ry (px,ry) (top tree)
-  in translate (rx - px, 0) plate
+trav :: Handler TreeShift 
+     -> QualTree (Bool, Color)
+     -> [Shape]
+trav fire (BiNode l (True,col) r, c) = 
+  let qt = (BiNode l (True,col) r, c)
+      loc = findLoc qt
+      linedest = findLoc (qtUp qt) - loc
+  in (trav fire (qtLeft qt))
+     ++ (trav fire (qtRight qt))
+     ++ [ Shape confSize''
+                loc
+                (sketchNode col linedest)
+                [OnClick (return (rotatos qt) >>= fire)] ]
+trav _ _ = []
 
-trav :: (Handler (Plate)) -> Double -> Double
-     -> Location -> QualTree Color -> [Shape]
-trav f lx y ploc (BiNode l col r, c) =
-  let qt = (BiNode l col r, c)
-      (x, _) = compX lx (fst qt)
-      (_, rx') = compX lx l
-      rx = advCX rx'
-      y' = advCY y 
-      loc = (x,y)
-      (px,py) = ploc
-      linedest = (px - x, py - y) 
-   in (trav f lx y' loc (qtLeft qt))
-      ++ (trav f rx y' loc (qtRight qt)) 
-      ++ [ Shape confSize'' 
-                 loc 
-                 (sketchNode col linedest)
-                 [OnClick (animate 1000 3 [((rotatos (\_ -> return ()) qt), (450::Double,50::Double), (670::Double,90::Double))] >> return (rotatos f qt) >>= f)] ]
-trav _ _ _ _ (EmptyTree, _) = []
+prepSTree :: Layout (BiTree (Bool, Color))
+prepSTree = prepTree (\_ -> return ())
 
-rotatos f qt = prepTree f ((fst . qtUpMost . rotate) qt)
+prepRTree qt = let rloc = findLoc (qtUpMost qt)
+                   tloc = findLoc (fst qt, Top)
+               in translate ((0,0) - tloc) ((prepSTree (fst qt)))
 
+mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
+mkInvis t = t
 
-{- Returns (x, x') such that 
-     x  = the x coordinate of this node
-     x' = the x coordinate of the next node to the right (any level) -}
-compX :: Double -> BiTree a -> (Double, Double)
-compX x (BiNode EmptyTree _ EmptyTree) = 
-  (x, advCX x) -- leaf node case
-compX x EmptyTree = 
-  (x, x) -- absent child case
-compX x (BiNode l _ r) = 
-  let (lx, x') = compX x l
-      (rx, x'') = compX (advCX x') r 
-  in (x', (x'')) 
+rotatos' qt = ([], fst . qtUpMost . rotate $ qt)
+
+rotatos :: QualTree (Bool, Color)
+        -> TreeShift
+rotatos (t, Top) = ([], t)
+rotatos qt = ( [ rTopTree qt
+               , rBottomTree qt
+               , rUpTree qt
+               , rDownTree qt ]
+             , (fst . qtUpMost . rotate) qt )
+  where qtcull = case qt of
+                   (_, L _ _ _) -> qtRight
+                   (_, R _ _ _) -> qtLeft
+
+qtCull qt = case qt of
+              (_, L _ _ _) -> qtRight qt
+              (_, R _ _ _) -> qtLeft qt
+
+rUpTree qt = let rqt = rotate qt
+             in ( prepRTree ((qtUp . mkInvis . qtCull) qt)
+                , findLoc qt, findLoc rqt)
+
+rDownTree qt = let rqt = rotate qt
+                   desc = case qt of
+                            (_, L _ _ _) -> qtRight
+                            (_, R _ _ _) -> qtLeft
+               in ( prepRTree ((qtUp . mkInvis) qt)
+                  , findLoc (qtUp qt), findLoc (desc rqt))
+
+rTopTree qt = ( prepSTree ((fst . qtUpMost . mkInvis . qtUp) qt)
+              , (0,0), (0,0))
+
+rBottomTree qt = ( prepRTree (qtCull qt)
+                 , findLoc (qtCull qt)
+                 , findLoc (qtCull qt) )
+
+findLoc :: QualTree a -> Location
+findLoc tree = (tx (findX tree), ty (depthOf tree - 1))
+  where tx = (*) distX . fromIntegral
+        ty = (*) distY . fromIntegral
+
+findX :: QualTree a -> Int
+findX qt = case qt of
+             (BiNode l _ r, Top) -> 
+               let lsubtree = (fst . qtLeft) qt
+                   initXIndex = 0
+               in nextX initXIndex lsubtree
+             (BiNode l _ r, L _ _ _) -> 
+               let rsubtree = (fst . qtRight) qt
+                   initXIndex = 0
+               in findX (qtUp qt) - nextX initXIndex rsubtree - 1
+             (BiNode l _ r, R _ _ _) -> 
+               let lsubtree = (fst . qtLeft) qt
+                   initXIndex = 0
+               in findX (qtUp qt) + nextX initXIndex lsubtree + 1
+  where nextX :: Int -> BiTree a -> Int
+        nextX x (BiNode EmptyTree _ EmptyTree) =
+          x + 1 -- leaf node case
+        nextX x EmptyTree =
+          x -- absent child case
+        nextX x (BiNode l _ r) =
+          let x' = nextX x l 
+          in nextX (x' + 1) r
 
 sketchNode :: Color -> Location -> [Primitive]
 sketchNode col ploc = [ Line (0,0) ploc 2
@@ -106,12 +156,9 @@ depth :: BiTree a -> Int
 depth EmptyTree = 0
 depth (BiNode l _ r) = (max (depth l) (depth r)) + 1
 
-countCh :: BiTree a -> Int
-countCh (BiNode EmptyTree _ EmptyTree) = 1
-countCh (BiNode l _ r) = (countCh l) + (countCh r)
-
-countCh' :: QualTree a -> Int
-countCh' = (countCh . fst . qtUpMost)
+depthOf :: QualTree a -> Int
+depthOf (_, Top) = 1
+depthOf t = ((+1) . depthOf . qtUp) t
 
 rotate :: QualTree a -> QualTree a
 rotate ( (BiNode l v r), (L p c t) ) = 

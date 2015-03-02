@@ -90,6 +90,18 @@ drawPlate l ss =
      restore c
      return ()
 
+drawPlates :: [(Location, Plate)] -> IO ()
+drawPlates ps = do c <- cx 
+                   save c
+                   clearRect 0 0 900 500 c
+                   foldr (\(l,p) r -> drawPlate' c l p >> r)
+                         (return ()) ps
+                   restore c
+                   return ()
+
+drawPlate' :: Context -> Location -> Plate -> IO ()
+drawPlate' c l ps = foldr (\s r -> drawShape c l s >> r) (return ()) ps
+
 type Coord = (Double, Double)
 
 drawTextCenter :: Coord   -- location at which to center the text
@@ -122,6 +134,9 @@ try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
                                  >> return (panicSize,f)
                     else print (show (floor f)) >> return (x,f)
 
+{- Traveller is going to need to change to a newtype so that
+   other Animate instances can be written for other Animates
+   that may technically have the same type TODO-}
 instance Animate [Traveller] where
   animate d s ts = let steps = fmap (calcStep s) ts
                        qts = zip ts steps
@@ -131,7 +146,8 @@ instance Animate [Traveller] where
 travel :: Int -> [(Traveller, Vector)] -> IO [(Traveller, Vector)]
 travel time qts = 
   let newqts = fmap (\((p,s,d),v) -> ((p,(s + v),d), v)) qts
-  in foldr (\((p,s,_),_) io -> io >> drawPlate s p) (return ()) qts
+  in drawPlates (fmap (\((p,s,d),v) -> (s,p)) newqts)
+     -- foldr (\((p,s,_),_) io -> io >> drawPlate s p) (return ()) qts
      >> threadDelay (time * 1000)
      >> return (newqts)
 
