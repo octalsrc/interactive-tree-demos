@@ -20,8 +20,19 @@ module Super.Canvas.Types ( Primitive (..)
                           , Plate (..) 
                           , Action (..) ) where
 
+import System.Random
+
 data Color = Red | Green | Blue | Yellow 
-             deriving (Show, Enum, Eq)
+             deriving (Show, Enum, Bounded, Eq)
+
+instance Random Color where
+  random g = 
+    case randomR ( fromEnum (minBound::Color)
+                 , fromEnum (maxBound::Color)) g of
+      (r, g') -> (toEnum r, g')
+  randomR (a,b) g = case randomR ( fromEnum a
+                                 , fromEnum b) g of
+                      (r,g') -> (toEnum r, g')
 
 nextColor Yellow = Red
 nextColor c = succ c

@@ -2,6 +2,8 @@
     ForeignFunctionInterface, JavaScriptFFI #-}
 
 module Super.Canvas.JS ( drawPlate
+                       , drawPlateB
+                       , printWin
                        , attachHandlers
                        , animate ) where
 
@@ -28,6 +30,8 @@ cx = sCanvas
      >>= indexArray 0 . castRef 
      >>= getContext
 
+printWin = do c <- cx
+              drawTextCenter (600, 350) (350) (100) "You win!" c
 attachHandlers c = do can <- sCanvas
                       let h ev = c =<< getMousePos ev
                       click h def can 
@@ -44,10 +48,10 @@ drawPrim (x,y) c (Circle (xo,yo) r f col) =
      putStrLn ("Drawing a circle...")
      beginPath c 
      fillStyle rc gc bc 255 c
-     strokeStyle 255 255 255 255 c
+     strokeStyle 0 0 0 255 c
      arc (x + xo) (y + yo) r 0 (2 * pi) True c
      if f
-        then fill c
+        then fill c >> stroke c
         else stroke c 
      return ()
 drawPrim (x,y) c (Line (xo,yo) (xd,yd) w) =
@@ -80,6 +84,9 @@ drawShape :: Context -> Location -> Shape -> IO ()
 drawShape c l (Shape _ coords ps _) = 
   foldr (\p r -> drawPrim (coords + l) c p >> r) (return ()) ps
 
+clearcan = clearRect 0 0 900 500
+clearcanB = clearRect 0 250 900 500
+
 drawPlate :: Location -> Plate -> IO ()
 drawPlate l ss = 
   do c <- cx
@@ -90,10 +97,20 @@ drawPlate l ss =
      restore c
      return ()
 
+drawPlateB :: Location -> Plate -> IO ()
+drawPlateB l ss = 
+  do c <- cx
+     save c
+     clearcanB c
+
+     foldr (\s r -> drawShape c l s >> r) (return ()) ss
+     restore c
+     return ()
+
 drawPlates :: [(Location, Plate)] -> IO ()
 drawPlates ps = do c <- cx 
                    save c
-                   clearRect 0 0 900 500 c
+                   clearcanB c
                    foldr (\(l,p) r -> drawPlate' c l p >> r)
                          (return ()) ps
                    restore c
@@ -141,7 +158,7 @@ instance Animate [Traveller] where
   animate d s ts = let steps = fmap (calcStep s) ts
                        qts = zip ts steps
                        time = d `div` s
-                   in repeatM s (travel time) qts >> return ()
+                   in (repeatM s (travel time) $! qts) >> return ()
 
 travel :: Int -> [(Traveller, Vector)] -> IO [(Traveller, Vector)]
 travel time qts = 

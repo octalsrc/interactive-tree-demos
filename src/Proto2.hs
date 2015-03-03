@@ -1,6 +1,8 @@
 import Reactive.Banana
 import Reactive.Banana.Frameworks
 
+import System.Random
+
 import Super.Canvas.Trees
 import Super.Canvas.Types
 import Super.Canvas.JS
@@ -11,31 +13,43 @@ main =
      c <- newAddHandler
      t <- newAddHandler 
      attachHandlers (snd c)
-     network <- compile (mkNet (fst c) (fst t) (snd t))
-     actuate network
      
-     return ([], sampleTree 5 Red) >>= (snd t)
+     
+     g <- newStdGen
+     let (rando,g') = random g
+         thetrees = randomTrees 4 rando
+     network <- compile (mkNet (fst thetrees) (fst c) (fst t) (snd t))
+     actuate network
+     drawPlate off (prepSTree (fst thetrees))
+     return ([], (snd thetrees)) >>= (snd t)
+     --return ([], sampleTree 5 Red) >>= (snd t)
      putStrLn "Started?"
 
      return ()
 
 off = (50, 50)
+off' = (50, 300)
 
-mkNet c t fire = 
+mkNet reftree c t fire = 
   do eClicks <- fromAddHandler c
      eTrees <- fromAddHandler t
      let ePlates = fmap (\(tv,bt) -> (tv, prepTree fire bt)) eTrees
-         eActions = fmap (\as cs -> Prelude.filter (checkB cs off) as) 
+         eActions = fmap (\as cs -> Prelude.filter (checkB cs off') as) 
                          (fmap (onlyClicks . getActions . snd) ePlates)
          bLive = stepper (const []) eActions
+         bWin = stepper (False) (fmap ((== reftree) . snd) eTrees)
          eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
+     cwin <- changes bWin
      reactimate (fmap sequence_ eTriggered) 
-     reactimate (fmap (\(tv,p) -> trya tv >> drawPlate off p) ePlates)
+     reactimate (fmap (\(tv,p) -> (trya $! tv) >> drawPlateB off' p) ePlates)
+     reactimate' (fmap (\w -> if w
+                                 then printWin
+                                 else return ()) <$> cwin)
 
 trya [] = return ()
-trya tv = animate 2000 4 (fmap (\(p,s,d) -> (p
-                                            ,(s + off)
-                                            ,(d + off))) tv)
+trya tv = animate 500 4 (fmap (\(p,s,d) -> (p
+                                           ,(s + off')
+                                           ,(d + off'))) tv)
 
 onlyClicks = filter (\a -> case a of
                              (_,_,OnClick _) -> True

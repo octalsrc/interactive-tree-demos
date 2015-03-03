@@ -4,12 +4,15 @@ module Super.Canvas.Trees ( BiTree (..)
                           , top
                           , qtUpMost
                           , sampleTree
+                          , randomTrees
                           , rotate
-                          , prepTree ) where
+                          , prepTree
+                          , prepSTree ) where
 
 -- import Control.Concurrent
 
 import Control.Event.Handler (Handler)
+import System.Random
 
 -- import Super.Canvas.JS
 import Super.Canvas.Types
@@ -17,6 +20,27 @@ import Super.Canvas.Types
 confSize = 10
 distX = (1.5 * confSize)
 distY = (2.5 * confSize)
+
+randomTrees :: Int -> Int -> (BiTree (Bool, Color), BiTree (Bool, Color))
+randomTrees i r = let g = mkStdGen r
+                      (col,g') = (random g)
+                      bs = (randoms g) :: [Bool]
+                      bs' = (randoms g') :: [Bool]
+                      tree = sampleTree i col 
+                  in ( (fst . qtUpMost . fst) (walk (top tree) bs)
+                     , (fst . qtUpMost . fst) (walk (top tree) bs') )
+
+walk (EmptyTree, c) (b:bs) = ((EmptyTree, c), bs)
+walk (BiNode l v r, c) (a:b:bs) = 
+  let tree = (BiNode l v r,c)
+      newr = if b
+                then (fst . qtUpMost . fst) (walk (r,Top) bs)
+                else r
+      newtree = (BiNode l v newr,c)
+      ltree = if a
+                 then (qtLeft . rotate) newtree
+                 else qtLeft newtree
+  in walk (ltree) bs
 
 sampleTree i col = 
   if i > 0
