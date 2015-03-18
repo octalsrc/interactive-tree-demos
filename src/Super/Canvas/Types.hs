@@ -1,26 +1,67 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Super.Canvas.Types ( Primitive (..)
-                          , Shape (..)
-                          , Layout (..)
+                          , SCanvas (..) 
                           , Factor (..)
                           , Location (..)
                           , Vector (..)
                           , BoundingBox (..)
-                          , Color (..)
-                          , Traveller (..)
-                          , Animate (..)
-                          , scale
+                          , Color (..) 
                           , nextColor
+                          , scalePrim
                           , actio
-                          , getIO
-                          , getActions
-                          , translate
-                          , QualAction (..)
-                          , Plate (..) 
+                          , getIO 
+                          , QualAction (..) 
                           , Action (..) ) where
 
 import System.Random
+
+data SCanvas = Node Location Factor [SCanvas]
+             | Prim Primitive
+             | Trigger BoundingBox [Action]
+             | Bounds BoundingBox
+
+
+-- all the recursive walking in these needs to be broken down,
+-- probably into an instance of Traversable?
+
+prims :: SCanvas -> [(Location, Factor, Primitive)]
+prims = r initLoc initFactor
+  where initLoc = (0,0)
+        initFactor = (1,1)
+        r :: Location -> Factor -> SCanvas
+          -> [(Location, Factor, Primitive)]
+        r pl pf (Node l f scs) = 
+          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
+        r pl pf (Prim prim) = [(pl, pf, prim)]
+        r _ _ _ = []
+
+actions :: SCanvas -> [(Location, BoundingBox, Action)]
+actions = r initLoc initFactor
+  where initLoc = (0,0)
+        initFactor = (1,1)
+        r :: Location -> Factor -> SCanvas
+          -> [(Location, BoundingBox, Action)]
+        r pl pf (Node l f scs) =
+          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
+        r pl pf (Trigger bb acs) = 
+          fmap (\a -> (pl, (bb * pf), a)) acs
+        r _ _ _ = []
+
+bounds sc = let xs = fmap fst (bounds' sc)
+                ys = fmap snd (bounds' sc)
+            in (maximum xs, maximum ys)
+
+bounds' :: SCanvas -> [BoundingBox]
+bounds' = r initLoc initFactor
+  where initLoc = (0,0)
+        initFactor = (1,1)
+        r :: Location -> Factor -> SCanvas
+          -> [BoundingBox]
+        r pl pf (Node l f scs) =
+          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
+        r pl pf (Bounds bb) =
+          [pl + (pf * bb)]
 
 data Color = Red | Green | Blue | Yellow 
              deriving (Show, Enum, Bounded, Eq)
@@ -58,16 +99,24 @@ type Factor      = CanvasValue
 type BoundingBox = CanvasValue
 type Vector      = CanvasValue
 
-data Primitive = -- offset, radius, fill, Color
-                 Circle (Double,Double) Double Bool Color
-                 -- offset-start, offset-dest, lthick
-               | Line (Double,Double) (Double,Double) Double
-                 -- offset, (width,height), text
-               | Text (Double,Double) (Double,Double) String
-                 -- offset-center, (width,height), fill, Color
-               | Rekt (Double,Double) (Double,Double) Color
+data Primitive = -- radius, fill, Color
+                 Circle Double Bool Color
+                 -- offset-dest, lthick
+               | Line Vector Double
+                 -- (width,height), text
+               | Text BoundingBox String
+                 -- (width,height), fill, Color
+               | Rekt BoundingBox Color
                deriving (Show, Eq)
 
+scalePrim :: Factor -> Primitive -> Primitive
+scalePrim f (Circle r b c) = Circle (r * (fst f)) b c
+scalePrim f (Line v t) = Line (v * f) t
+scalePrim f (Text b s) = Text (b * f) s
+scalePrim f (Rekt b c) = Rekt (b * f) c
+
+{-
+        
 data Shape = Shape { bounds  :: BoundingBox 
                    , coords  :: Location
                    , prims   :: [Primitive]
@@ -75,16 +124,18 @@ data Shape = Shape { bounds  :: BoundingBox
 
 instance Show Shape where
   show (Shape b c p _) = show (b, c, p)
-
-data Action = OnClick (IO ()) | MouseOver (IO ())
+        -}
+data Action = OnClick (IO ()) -- maybe later.. | MouseOver (IO ())
 
 actio (OnClick io) = io
-actio (MouseOver io) = io
+--actio (MouseOver io) = io
 
-type QualAction = ((Double, Double), (Double, Double), Action)
+type QualAction = (Location, BoundingBox, Action)
 
 getIO (_,_,ac) = actio ac
 
+{-
+        
 type Layout a = (a -> Plate)
 
 scaleS :: Factor -> Shape -> Shape
@@ -119,3 +170,4 @@ class Animate a where
           -> IO () -- (blocking) animation action
 
 type Traveller = (Plate, Location, Location)
+        -}

@@ -1,11 +1,17 @@
 {-# LANGUAGE CPP, FlexibleInstances, 
     ForeignFunctionInterface, JavaScriptFFI #-}
 
+{-
+
 module Super.Canvas.JS ( drawPlate
                        , drawPlateB
                        , printWin
                        , attachHandlers
-                       , animate ) where
+                       , animate ) where                
+        
+        -}
+
+module Super.Canvas.JS (printWin, attachHandlers) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -42,6 +48,51 @@ getMousePos ev = do x <- ffiGetMX ev
                     y <- ffiGetMY ev
                     return (fromIntegral x, fromIntegral y)
 
+clearcan = clearRect 0 0 900 500
+
+write :: [(Location, Factor, Primitive)] -> Context -> IO ()
+write prims c = sequence_ (fmap (writePrim c) prims)
+
+writePrim :: Context -> (Location, Factor, Primitive) -> IO ()
+writePrim c (l,f,p) = 
+  let prim = scalePrim f p
+      (x,y) = l
+  in case prim of
+       Circle r f col -> 
+         do let (rc, gc, bc) = style col
+            putStrLn ("Drawing a circle...")
+            beginPath c 
+            fillStyle rc gc bc 255 c
+            strokeStyle 0 0 0 255 c
+            arc x y r 0 (2 * pi) True c
+            if f
+               then fill c >> stroke c
+               else stroke c 
+            return ()
+       Line (xd,yd) w ->
+         do putStrLn ("Drawing a line...")
+            beginPath c
+            moveTo x y c
+            lineTo (x + xd) (y + yd) c
+            lineWidth w c
+            strokeStyle 0 0 0 255 c
+            stroke c
+            return ()
+       Text (w,h) s ->
+         drawTextCenter (x,y) w h s c
+       Rekt (w,h) col ->
+         do let (rc, gc, bc) = style col
+            putStrLn ("Drawing a rekt...")
+            fillStyle rc gc bc 255 c
+            fillRect x y w h c
+            return ()
+
+style Red = (255, 0, 0)
+style Green = (0, 190, 0)
+style Blue = (0, 0, 230)
+style Yellow = (255, 170, 0)
+
+{-
 drawPrim :: (Double, Double) -> Context -> Primitive -> IO ()
 drawPrim (x,y) c (Circle (xo,yo) r f col) =
   do let (rc, gc, bc) = style col
@@ -117,8 +168,8 @@ drawPlates ps = do c <- cx
                    return ()
 
 drawPlate' :: Context -> Location -> Plate -> IO ()
-drawPlate' c l ps = foldr (\s r -> drawShape c l s >> r) (return ()) ps
-
+drawPlate' c l ps = foldr (\s r -> drawShape c l s >> r) (return ()) ps        
+        -}
 type Coord = (Double, Double)
 
 drawTextCenter :: Coord   -- location at which to center the text
@@ -154,12 +205,16 @@ try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
 {- Traveller is going to need to change to a newtype so that
    other Animate instances can be written for other Animates
    that may technically have the same type TODO-}
+{-
 instance Animate [Traveller] where
   animate d s ts = let steps = fmap (calcStep s) ts
                        qts = zip ts steps
                        time = d `div` s
-                   in (repeatM s (travel time) $! qts) >> return ()
+                   in (repeatM s (travel time) $! qts) >> return () 
+-}
 
+
+{-
 travel :: Int -> [(Traveller, Vector)] -> IO [(Traveller, Vector)]
 travel time qts = 
   let newqts = fmap (\((p,s,d),v) -> ((p,(s + v),d), v)) qts
@@ -177,7 +232,7 @@ repeatM n f v = if n > 0
 calcStep :: Int -> Traveller -> Vector
 calcStep s (_, start, end) = (end - start) / ( fromIntegral s
                                              , fromIntegral s)
-
+        -}
 foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
    ffiGetMX :: JavaScript.JQuery.Event -> IO Int
 

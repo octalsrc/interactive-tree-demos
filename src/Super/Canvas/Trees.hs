@@ -173,8 +173,8 @@ findX qt = case qt of
           in nextX (x' + 1) r
 
 sketchNode :: Color -> Location -> [Primitive]
-sketchNode col ploc = [ Line (0,0) ploc 2
-                      , Circle (0,0) confSize True col ]
+sketchNode col ploc = [ Line ploc 2
+                      , Circle confSize True col ]
 
 depth :: BiTree a -> Int
 depth EmptyTree = 0
