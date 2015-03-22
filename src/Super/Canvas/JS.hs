@@ -11,7 +11,7 @@ module Super.Canvas.JS ( drawPlate
         
         -}
 
-module Super.Canvas.JS (printWin, attachHandlers) where
+module Super.Canvas.JS (cx, clearcan, write, printWin, attachHandlers) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -50,8 +50,8 @@ getMousePos ev = do x <- ffiGetMX ev
 
 clearcan = clearRect 0 0 900 500
 
-write :: [(Location, Factor, Primitive)] -> Context -> IO ()
-write prims c = sequence_ (fmap (writePrim c) prims)
+write :: Context -> [(Location, Factor, Primitive)] -> IO ()
+write c prims = sequence_ (fmap (writePrim c) prims)
 
 writePrim :: Context -> (Location, Factor, Primitive) -> IO ()
 writePrim c (l,f,p) = 

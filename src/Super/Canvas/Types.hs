@@ -8,6 +8,7 @@ module Super.Canvas.Types ( Primitive (..)
                           , BoundingBox (..)
                           , Color (..) 
                           , nextColor
+                          , prims
                           , scalePrim
                           , actio
                           , getIO 
