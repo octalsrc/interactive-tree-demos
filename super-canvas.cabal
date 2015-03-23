@@ -17,7 +17,9 @@ cabal-version:       >=1.10
 
 executable super-canvas
   main-is:             Proto3.hs
-  other-modules:        Super.Canvas.Types,
+  other-modules:       Super.Canvas,
+                       Super.Trees,
+                       Super.Canvas.Types,
                        Super.Canvas.JS
   other-extensions:    CPP, ForeignFunctionInterface, JavaScriptFFI
   build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3,

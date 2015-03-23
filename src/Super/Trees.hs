@@ -1,13 +1,13 @@
-module Super.Canvas.Trees ( BiTree (..)
-                          , QualTree (..)
-                          , BTContext (..)
-                          , top
-                          , qtUpMost
-                          , sampleTree
-                          , randomTrees
-                          , rotate
-                          , prepTree
-                          , prepSTree ) where
+module Super.Trees ( BiTree (..)
+                   , QualTree (..)
+                   , BTContext (..)
+                   , top
+                   , qtUpMost
+                   , sampleTree
+                   , randomTrees
+                   , rotate
+                   , prepTree
+                   , prepSTree ) where
 
 -- import Control.Concurrent
 
@@ -15,6 +15,7 @@ import Control.Event.Handler (Handler)
 import System.Random
 
 -- import Super.Canvas.JS
+import Super.Canvas
 import Super.Canvas.Types
 
 confSize = 10
@@ -59,7 +60,7 @@ data BTContext a = Top
 
 type QualTree a = (BiTree a, BTContext a)
 
-type TreeShift = ([Traveller], BiTree (Bool, Color))
+--type TreeShift = ([Traveller], BiTree (Bool, Color))
 
 qtLeft   (BiNode l v r, c)   = ( l, L v c r )
 qtRight  (BiNode l v r, c)   = ( r, R l v c )
@@ -79,26 +80,28 @@ top t = (t, Top)
 confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
 
-prepTree :: Handler TreeShift
-         -> Layout (BiTree (Bool, Color))
+prepTree :: Handler (BiTree (Bool, Color)) 
+         -> BiTree (Bool, Color) 
+         -> SCanvas
 prepTree f tree = trav f (top tree)
 
-trav :: Handler TreeShift 
+trav :: Handler (BiTree (Bool, Color)) 
      -> QualTree (Bool, Color)
-     -> [Shape]
+     -> SCanvas
 trav fire (BiNode l (True,col) r, c) = 
   let qt = (BiNode l (True,col) r, c)
       loc = findLoc qt
       linedest = findLoc (qtUp qt) - loc
-  in (trav fire (qtLeft qt))
-     ++ (trav fire (qtRight qt))
-     ++ [ Shape confSize''
-                loc
-                (sketchNode col linedest)
-                [OnClick (return (rotatos qt) >>= fire)] ]
-trav _ _ = []
+  in combine 
+       [ (trav fire (qtLeft qt))
+       , (trav fire (qtRight qt))
+       , addOnClick 
+           [(return (rotatos qt) >>= fire)] 
+           (translate 
+              loc 
+              (sketchNode col linedest)) ]
+trav _ _ = blank
 
-prepSTree :: Layout (BiTree (Bool, Color))
 prepSTree = prepTree (\_ -> return ())
 
 prepRTree qt = let rloc = findLoc (qtUpMost qt)
@@ -108,10 +111,10 @@ prepRTree qt = let rloc = findLoc (qtUpMost qt)
 mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
 mkInvis t = t
 
+rotatos qt = (fst . qtUpMost . rotate) qt
 rotatos' qt = ([], fst . qtUpMost . rotate $ qt)
-
-rotatos :: QualTree (Bool, Color)
-        -> TreeShift
+{-
+rotatos :: QualTree (Bool, Color) -> TreeShift
 rotatos (t, Top) = ([], t)
 rotatos qt = ( [ rTopTree qt
                , rBottomTree qt
@@ -121,7 +124,7 @@ rotatos qt = ( [ rTopTree qt
   where qtcull = case qt of
                    (_, L _ _ _) -> qtRight
                    (_, R _ _ _) -> qtLeft
-
+        -}
 qtCull qt = case qt of
               (_, L _ _ _) -> qtRight qt
               (_, R _ _ _) -> qtLeft qt
@@ -172,9 +175,14 @@ findX qt = case qt of
           let x' = nextX x l 
           in nextX (x' + 1) r
 
-sketchNode :: Color -> Location -> [Primitive]
-sketchNode col ploc = [ Line ploc 2
-                      , Circle confSize True col ]
+--sketchNode :: Color -> Location -> [Primitive]
+--sketchNode col ploc = [ Line ploc 2
+--                      , Circle confSize True col ]
+
+sketchNode :: Color -> Location -> SCanvas
+sketchNode col ploc = 
+  combine [ line idLocation ploc 2 
+          , circle idLocation confSize True col ]
 
 depth :: BiTree a -> Int
 depth EmptyTree = 0

@@ -1,10 +1,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Super.Canvas.Types ( Primitive (..)
+                          , SCLeaf (..)
+                          , SCElem (..)
+                          , QElem (..)
                           , SCanvas (..) 
                           , Factor (..)
+                          , idFactor
+                          , bounds
+                          , draws
+                          , idLocation
                           , Location (..)
                           , Vector (..)
+                          , idVector
                           , BoundingBox (..)
                           , Color (..) 
                           , nextColor
@@ -17,52 +25,61 @@ module Super.Canvas.Types ( Primitive (..)
 
 import System.Random
 
-data SCanvas = Node Location Factor [SCanvas]
-             | Prim Primitive
-             | Trigger BoundingBox [Action]
-             | Bounds BoundingBox
+data SCanvas = Node [SCanvas]
+             | Leaf SCLeaf
 
+data SCLeaf = Scale Factor SCanvas
+            | Trans Vector SCanvas
+            | Elem SCElem
 
--- all the recursive walking in these needs to be broken down,
--- probably into an instance of Traversable?
+data SCElem = Prim Primitive
+            | Trigger BoundingBox [Action]
+            | Bounds BoundingBox
+
+type QElem = (Location, Factor, SCElem)
+
+qList :: SCanvas -> [QElem]
+qList = r initLoc initFactor
+  where initLoc = (0,0)
+        initFactor = (1,1)
+        r :: Location -> Factor -> SCanvas -> [QElem]
+        r pl pf (Node scs) = foldr (\a -> (++) (r pl pf a)) [] scs
+        r pl pf (Leaf (Trans l sc)) = r (pl + l) pf sc
+        r pl pf (Leaf (Scale f sc)) = r pl (pf * f) sc
+        r pl pf (Leaf (Elem e)) = [(pl * pf, pf, e)]
+
+type Draw = (Location, Primitive)
+
+draws :: SCanvas -> [Draw]
+draws = fmap (\(l,f,p) -> (l, scalePrim f p)) . prims
 
 prims :: SCanvas -> [(Location, Factor, Primitive)]
-prims = r initLoc initFactor
-  where initLoc = (0,0)
-        initFactor = (1,1)
-        r :: Location -> Factor -> SCanvas
-          -> [(Location, Factor, Primitive)]
-        r pl pf (Node l f scs) = 
-          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
-        r pl pf (Prim prim) = [(pl, pf, prim)]
-        r _ _ _ = []
+prims = f . qList
+  where f = foldr (\e as -> 
+                     case e of
+                       (l,f,(Prim p)) -> (l,f,p) : as
+                       _ -> as) []
+
+
 
 actions :: SCanvas -> [(Location, BoundingBox, Action)]
-actions = r initLoc initFactor
-  where initLoc = (0,0)
-        initFactor = (1,1)
-        r :: Location -> Factor -> SCanvas
-          -> [(Location, BoundingBox, Action)]
-        r pl pf (Node l f scs) =
-          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
-        r pl pf (Trigger bb acs) = 
-          fmap (\a -> (pl, (bb * pf), a)) acs
-        r _ _ _ = []
+actions = concat . f . qList
+  where f = foldr (\e as -> 
+                     case e of
+                       (l,f,(Trigger b acs)) -> 
+                         q l (f * b) acs : as
+                       _ -> as) []
+        q l b = fmap (\a -> (l,b,a))
 
-bounds sc = let xs = fmap fst (bounds' sc)
-                ys = fmap snd (bounds' sc)
-            in (maximum xs, maximum ys)
-
-bounds' :: SCanvas -> [BoundingBox]
-bounds' = r initLoc initFactor
-  where initLoc = (0,0)
-        initFactor = (1,1)
-        r :: Location -> Factor -> SCanvas
-          -> [BoundingBox]
-        r pl pf (Node l f scs) =
-          foldr (\sc scs -> (r (pl + (l * pf)) (pf * f) sc) ++ scs) [] scs
-        r pl pf (Bounds bb) =
-          [pl + (pf * bb)]
+bounds sc = 
+  let bs = foldr (\e as -> 
+                 case e of
+                   (l,f,(Bounds b)) -> 
+                     (f * b) : as
+                   _ -> as) []
+      xs = fmap fst (bs (qList sc))
+      ys = fmap snd (bs (qList sc))
+  in (maximum xs, maximum ys)
 
 data Color = Red | Green | Blue | Yellow 
              deriving (Show, Enum, Bounded, Eq)
@@ -99,6 +116,10 @@ type Location    = CanvasValue
 type Factor      = CanvasValue
 type BoundingBox = CanvasValue
 type Vector      = CanvasValue
+
+idVector = (0,0) :: Vector
+idFactor = (1,1) :: Factor
+idLocation = (0,0) :: Location
 
 data Primitive = -- radius, fill, Color
                  Circle Double Bool Color

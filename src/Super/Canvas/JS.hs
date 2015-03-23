@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP, FlexibleInstances, 
-    ForeignFunctionInterface, JavaScriptFFI #-}
+    ForeignFunctionInterface, JavaScriptFFI,
+    BangPatterns #-}
 
 {-
 
@@ -50,12 +51,12 @@ getMousePos ev = do x <- ffiGetMX ev
 
 clearcan = clearRect 0 0 900 500
 
-write :: Context -> [(Location, Factor, Primitive)] -> IO ()
-write c prims = sequence_ (fmap (writePrim c) prims)
+write :: Context -> [(Location, Primitive)] -> IO ()
+write c !prims = sequence_ (fmap (writePrim c) prims)
 
-writePrim :: Context -> (Location, Factor, Primitive) -> IO ()
-writePrim c (l,f,p) = 
-  let prim = scalePrim f p
+writePrim :: Context -> (Location, Primitive) -> IO ()
+writePrim c (l,p) = 
+  let prim = p
       (x,y) = l
   in case prim of
        Circle r f col -> 
