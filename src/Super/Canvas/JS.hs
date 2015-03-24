@@ -41,7 +41,7 @@ getCanvas name = selp ("#" ++ name)
                  >>= indexArray 0 . castRef 
                  >>= getContext
 
-attachClickHandler name c = do can <- selp name
+attachClickHandler name c = do can <- selp ("#" ++ name)
                                let h ev = c =<< getMousePos ev
                                click h def can 
                                return ()
@@ -54,7 +54,8 @@ getMousePos ev = do x <- ffiGetMX ev
 clearcan = clearRect 0 0 900 500
 
 writeToCanvas :: Context -> [Draw] -> IO ()
-writeToCanvas c !prims = sequence_ (fmap (writePrim c) prims)
+writeToCanvas c !prims = 
+  clearcan c >> sequence_ (fmap (writePrim c) prims)
 
 writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 

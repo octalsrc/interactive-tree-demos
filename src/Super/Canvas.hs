@@ -28,7 +28,6 @@ write :: SuperCanvas -> SuperForm -> IO ()
 write (SC cx newAc) sf = 
   do newAc (actions sf)
      writeToCanvas cx (draws sf)
-     undefined
 
 startCanvas :: String -> IO (SuperCanvas)
 startCanvas name = 
@@ -52,12 +51,15 @@ mkNet c a =
          eTriggered = fmap (fmap getIO) 
                            (bLive <@> eClicks)
      reactimate (fmap sequence_ eTriggered)
+     reactimate (fmap (\e -> putStrLn "triggerd!" >> print (length e)) eTriggered)
+     reactimate (fmap (\as -> putStrLn "new actions!" >> sequence_ (fmap (\(l,b,_) -> print (l,b)) as)) eQActions)
+     reactimate (fmap (\e -> putStrLn "click!" >> print e) eClicks)
 
-checkB :: (Double, Double) -> QualAction -> Bool
-checkB (x,y) ((a,b),(w,h),_) = x >= a - w / 2
-                               && x <= (a + w / 2)
-                               && y >= b - h / 2
-                               && y <= (b + h / 2) 
+checkB :: Location -> QualAction -> Bool
+checkB (x,y) ((a,b),(w,h),_) = x >= a
+                               && x <= (a + w)
+                               && y >= b
+                               && y <= (b + h) 
 
 circle :: Location -> Double -> Bool -> Color -> SuperForm
 circle loc rad fill col = primElev loc 
@@ -107,7 +109,7 @@ onClick ios l b =
 addOnClick :: [IO ()] -> SuperForm -> SuperForm
 addOnClick ios sc = 
   let b = bounds sc
-      a = onClick ios idLocation (snd b - fst b)
+      a = onClick ios (fst b) (snd b)
   in combine [sc, a]
 
 blank :: SuperForm
