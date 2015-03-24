@@ -12,7 +12,11 @@ module Super.Canvas.JS ( drawPlate
         
         -}
 
-module Super.Canvas.JS (cx, clearcan, write, printWin, attachHandlers) where
+module Super.Canvas.JS ( getCanvas
+                       , clearcan
+                       , writeToCanvas
+                       , attachClickHandler
+                       , Context ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
@@ -33,16 +37,14 @@ selp = select . pack
 
 sCanvas = selp ("#" ++ canvasName)
 
-cx = sCanvas 
-     >>= indexArray 0 . castRef 
-     >>= getContext
+getCanvas name = selp ("#" ++ name)
+                 >>= indexArray 0 . castRef 
+                 >>= getContext
 
-printWin = do c <- cx
-              drawTextCenter (600, 350) (350) (100) "You win!" c
-attachHandlers c = do can <- sCanvas
-                      let h ev = c =<< getMousePos ev
-                      click h def can 
-                      return ()
+attachClickHandler name c = do can <- selp name
+                               let h ev = c =<< getMousePos ev
+                               click h def can 
+                               return ()
 
 getMousePos :: Event -> IO (Double, Double)
 getMousePos ev = do x <- ffiGetMX ev
@@ -51,10 +53,10 @@ getMousePos ev = do x <- ffiGetMX ev
 
 clearcan = clearRect 0 0 900 500
 
-write :: Context -> [(Location, Primitive)] -> IO ()
-write c !prims = sequence_ (fmap (writePrim c) prims)
+writeToCanvas :: Context -> [Draw] -> IO ()
+writeToCanvas c !prims = sequence_ (fmap (writePrim c) prims)
 
-writePrim :: Context -> (Location, Primitive) -> IO ()
+writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 
   let prim = p
       (x,y) = l

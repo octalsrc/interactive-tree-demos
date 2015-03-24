@@ -4,9 +4,10 @@ module Super.Canvas.Types ( Primitive (..)
                           , SCLeaf (..)
                           , SCElem (..)
                           , QElem (..)
-                          , SCanvas (..) 
+                          , SuperForm (..) 
                           , Factor (..)
                           , idFactor
+                          , actions
                           , bounds
                           , draws
                           , idLocation
@@ -18,6 +19,7 @@ module Super.Canvas.Types ( Primitive (..)
                           , nextColor
                           , prims
                           , scalePrim
+                          , Draw (..)
                           , actio
                           , getIO 
                           , QualAction (..) 
@@ -25,11 +27,11 @@ module Super.Canvas.Types ( Primitive (..)
 
 import System.Random
 
-data SCanvas = Node [SCanvas]
+data SuperForm = Node [SuperForm]
              | Leaf SCLeaf
 
-data SCLeaf = Scale Factor SCanvas
-            | Trans Vector SCanvas
+data SCLeaf = Scale Factor SuperForm
+            | Trans Vector SuperForm
             | Elem SCElem
 
 data SCElem = Prim Primitive
@@ -38,11 +40,11 @@ data SCElem = Prim Primitive
 
 type QElem = (Location, Factor, SCElem)
 
-qList :: SCanvas -> [QElem]
+qList :: SuperForm -> [QElem]
 qList = r initLoc initFactor
   where initLoc = (0,0)
         initFactor = (1,1)
-        r :: Location -> Factor -> SCanvas -> [QElem]
+        r :: Location -> Factor -> SuperForm -> [QElem]
         r pl pf (Node scs) = foldr (\a -> (++) (r pl pf a)) [] scs
         r pl pf (Leaf (Trans l sc)) = r (pl + l) pf sc
         r pl pf (Leaf (Scale f sc)) = r pl (pf * f) sc
@@ -50,19 +52,17 @@ qList = r initLoc initFactor
 
 type Draw = (Location, Primitive)
 
-draws :: SCanvas -> [Draw]
+draws :: SuperForm -> [Draw]
 draws = fmap (\(l,f,p) -> (l, scalePrim f p)) . prims
 
-prims :: SCanvas -> [(Location, Factor, Primitive)]
+prims :: SuperForm -> [(Location, Factor, Primitive)]
 prims = f . qList
   where f = foldr (\e as -> 
                      case e of
                        (l,f,(Prim p)) -> (l,f,p) : as
                        _ -> as) []
 
-
-
-actions :: SCanvas -> [(Location, BoundingBox, Action)]
+actions :: SuperForm -> [QualAction]
 actions = concat . f . qList
   where f = foldr (\e as -> 
                      case e of
@@ -75,11 +75,15 @@ bounds sc =
   let bs = foldr (\e as -> 
                  case e of
                    (l,f,(Bounds b)) -> 
-                     (f * b) : as
+                     (l, f * b) : as
                    _ -> as) []
-      xs = fmap fst (bs (qList sc))
-      ys = fmap snd (bs (qList sc))
-  in (maximum xs, maximum ys)
+      xl = fmap (fst . fst) (bs (qList sc))
+      yl = fmap (snd . fst) (bs (qList sc))
+      bbs = fmap (\(l,b) -> l + b) (bs (qList sc))
+      xs = fmap fst bbs
+      ys = fmap snd bbs
+  in ( (minimum xl, minimum yl)
+     , (maximum xs - minimum xl, maximum ys - minimum yl))
 
 data Color = Red | Green | Blue | Yellow 
              deriving (Show, Enum, Bounded, Eq)

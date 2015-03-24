@@ -82,24 +82,26 @@ confSize'' = (confSize * 2, confSize * 2)
 
 prepTree :: Handler (BiTree (Bool, Color)) 
          -> BiTree (Bool, Color) 
-         -> SCanvas
+         -> SuperForm
 prepTree f tree = trav f (top tree)
 
 trav :: Handler (BiTree (Bool, Color)) 
      -> QualTree (Bool, Color)
-     -> SCanvas
+     -> SuperForm
 trav fire (BiNode l (True,col) r, c) = 
   let qt = (BiNode l (True,col) r, c)
       loc = findLoc qt
       linedest = findLoc (qtUp qt) - loc
+      node = (sketchNode 
+                col 
+                linedest
+                [(return (rotatos qt) >>= fire)])
+      bbs = bounds node
   in combine 
        [ (trav fire (qtLeft qt))
        , (trav fire (qtRight qt))
-       , addOnClick 
-           [(return (rotatos qt) >>= fire)] 
-           (translate 
-              loc 
-              (sketchNode col linedest)) ]
+       , translate loc (rekt (fst bbs) (snd bbs) Green)
+       , translate loc node           ]
 trav _ _ = blank
 
 prepSTree = prepTree (\_ -> return ())
@@ -179,10 +181,14 @@ findX qt = case qt of
 --sketchNode col ploc = [ Line ploc 2
 --                      , Circle confSize True col ]
 
-sketchNode :: Color -> Location -> SCanvas
-sketchNode col ploc = 
-  combine [ line idLocation ploc 2 
-          , circle idLocation confSize True col ]
+sketchNode :: Color -> Location -> [IO ()] -> SuperForm
+sketchNode col ploc acs = 
+  let circ = circle idLocation confSize True col
+  in combine [ line idLocation ploc 2
+             , rekt (fst (bounds circ)) (snd (bounds circ)) Red
+             , addOnClick 
+                 acs 
+                 circ ] 
 
 depth :: BiTree a -> Int
 depth EmptyTree = 0

@@ -7,60 +7,114 @@ module Super.Canvas ( circle
                     , scale
                     , onClick
                     , addOnClick
-                    , translate ) where
+                    , translate
+                    , getCanvas
+                    , write
+                    , Color (..)
+                    , SuperCanvas
+                    , SuperForm
+                    , startCanvas ) where
+
+import Control.Event.Handler (Handler)
+import Reactive.Banana
+import Reactive.Banana.Frameworks
 
 import Super.Canvas.Types
 import Super.Canvas.JS
 
-circle :: Location -> Double -> Bool -> Color -> SCanvas
+data SuperCanvas = SC Context (Handler [QualAction])
+
+write :: SuperCanvas -> SuperForm -> IO ()
+write (SC cx newAc) sf = 
+  do newAc (actions sf)
+     writeToCanvas cx (draws sf)
+     undefined
+
+startCanvas :: String -> IO (SuperCanvas)
+startCanvas name = 
+  do can <- getCanvas name
+     cH <- newAddHandler
+     aH <- newAddHandler
+     attachClickHandler name (snd cH)
+     network <- compile (mkNet (fst cH) (fst aH))
+     actuate network
+     return (SC can (snd aH))
+
+stopCanvas :: SuperCanvas -> IO ()
+stopCanvas = undefined
+
+mkNet c a = 
+  do eClicks <- fromAddHandler c
+     eQActions <- fromAddHandler a
+     let arm = (\qa cs -> filter (checkB cs) qa)
+         eActive = fmap arm eQActions
+         bLive = stepper (const []) eActive
+         eTriggered = fmap (fmap getIO) 
+                           (bLive <@> eClicks)
+     reactimate (fmap sequence_ eTriggered)
+
+checkB :: (Double, Double) -> QualAction -> Bool
+checkB (x,y) ((a,b),(w,h),_) = x >= a - w / 2
+                               && x <= (a + w / 2)
+                               && y >= b - h / 2
+                               && y <= (b + h / 2) 
+
+circle :: Location -> Double -> Bool -> Color -> SuperForm
 circle loc rad fill col = primElev loc 
                                    (loc - (rad,rad)) 
                                    (rad * 2, rad * 2) 
                                    (Circle rad fill col)
 
-line :: Location -> Vector -> Double -> SCanvas
+line :: Location -> Vector -> Double -> SuperForm
 line loc dest thick = 
-  primElev loc loc (loc + dest) (Line dest thick)
+  let minx = min (fst loc) (fst (loc + dest))
+      miny = min (snd loc) (snd (loc + dest))
+      maxx = max (fst loc) (fst (loc + dest))
+      maxy = max (snd loc) (snd (loc + dest))
+      box = (maxx, maxy) - (minx, miny)
+  in primElev loc (minx, miny) box (Line dest thick) 
 
-text :: Location -> BoundingBox -> String -> SCanvas
+
+text :: Location -> BoundingBox -> String -> SuperForm
 text loc box str = 
   primElev loc 
            (loc - (box / (2,2))) 
            box 
            (Text box str)
 
-rekt :: Location -> BoundingBox -> Color -> SCanvas
+rekt :: Location -> BoundingBox -> Color -> SuperForm
 rekt loc box col = 
   primElev loc loc box (Rekt box col)
 
-combine :: [SCanvas] -> SCanvas
+combine :: [SuperForm] -> SuperForm
 combine = Node . fmap pullUp
 
-pullUp :: SCanvas -> SCanvas
+-- purpose here is to cull unnecessary node-nesting
+pullUp :: SuperForm -> SuperForm
 pullUp (Node ((Node n):[])) = Node n
 pullUp n = n
 
-scale :: Factor -> SCanvas -> SCanvas
+scale :: Factor -> SuperForm -> SuperForm
 scale f = Leaf . Scale f
 
-translate :: Vector -> SCanvas -> SCanvas
+translate :: Vector -> SuperForm -> SuperForm
 translate v = Leaf . Trans v 
 
-onClick :: [IO ()] -> Location -> BoundingBox -> SCanvas
+onClick :: [IO ()] -> Location -> BoundingBox -> SuperForm
 onClick ios l b = 
   Leaf (Trans l (Leaf (Elem (Trigger b (fmap OnClick ios)))))
 
-addOnClick :: [IO ()] -> SCanvas -> SCanvas
+addOnClick :: [IO ()] -> SuperForm -> SuperForm
 addOnClick ios sc = 
   let b = bounds sc
-      a = onClick ios idLocation b
+      a = onClick ios idLocation (snd b - fst b)
   in combine [sc, a]
 
-blank :: SCanvas
+blank :: SuperForm
 blank = Node []
 
 primElev :: Location -> Location -> BoundingBox -> Primitive 
-         -> SCanvas
+         -> SuperForm
 primElev loc boxloc box prim = 
   Node [ Leaf (Trans loc (Leaf (Elem (Prim prim))))
        , Leaf (Trans boxloc (Leaf (Elem (Bounds box))))]
