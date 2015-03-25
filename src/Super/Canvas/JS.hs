@@ -13,6 +13,8 @@ module Super.Canvas.JS ( drawPlate
         -}
 
 module Super.Canvas.JS ( getCanvas
+                       , attachButton
+                       , attachField
                        , clearcan
                        , writeToCanvas
                        , attachClickHandler
@@ -45,6 +47,18 @@ attachClickHandler name c = do can <- selp ("#" ++ name)
                                let h ev = c =<< getMousePos ev
                                click h def can 
                                return ()
+
+attachButton name b = do but <- selp ("#" ++ name)
+                         let h ev = b =<< return ()
+                         click h def but
+                         return ()
+                         
+attachField name f = do field <- selp ("#" ++ name)
+                        let d = do val <- getVal field
+                                   return (unpack val)
+                            h ev = f =<< d
+                        keyup h def field
+                        return ()
 
 getMousePos :: Event -> IO (Double, Double)
 getMousePos ev = do x <- ffiGetMX ev

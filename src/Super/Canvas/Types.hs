@@ -46,9 +46,9 @@ qList = r initLoc initFactor
         initFactor = (1,1)
         r :: Location -> Factor -> SuperForm -> [QElem]
         r pl pf (Node scs) = foldr (\a -> (++) (r pl pf a)) [] scs
-        r pl pf (Leaf (Trans l sc)) = r (pl + l) pf sc
+        r pl pf (Leaf (Trans l sc)) = r (pl + (l * pf)) pf sc
         r pl pf (Leaf (Scale f sc)) = r pl (pf * f) sc
-        r pl pf (Leaf (Elem e)) = [(pl * pf, pf, e)]
+        r pl pf (Leaf (Elem e)) = [(pl, pf, e)]
 
 type Draw = (Location, Primitive)
 

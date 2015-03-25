@@ -100,7 +100,7 @@ trav fire (BiNode l (True,col) r, c) =
   in combine 
        [ (trav fire (qtLeft qt))
        , (trav fire (qtRight qt))
-       , translate loc (rekt (fst bbs) (snd bbs) Green)
+       --, translate loc (rekt (fst bbs) (snd bbs) Green)
        , translate loc node           ]
 trav _ _ = blank
 
@@ -185,7 +185,7 @@ sketchNode :: Color -> Location -> [IO ()] -> SuperForm
 sketchNode col ploc acs = 
   let circ = circle idLocation confSize True col
   in combine [ line idLocation ploc 2
-             , rekt (fst (bounds circ)) (snd (bounds circ)) Red
+             --, rekt (fst (bounds circ)) (snd (bounds circ)) Red
              , addOnClick 
                  acs 
                  circ ] 

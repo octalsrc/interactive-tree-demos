@@ -1,4 +1,5 @@
 module Super.Canvas ( circle
+                    , fit
                     , line
                     , text
                     , rekt
@@ -10,6 +11,8 @@ module Super.Canvas ( circle
                     , translate
                     , getCanvas
                     , write
+                    , attachButton
+                    , attachField
                     , Color (..)
                     , SuperCanvas
                     , SuperForm
@@ -60,6 +63,13 @@ checkB (x,y) ((a,b),(w,h),_) = x >= a
                                && x <= (a + w)
                                && y >= b
                                && y <= (b + h) 
+
+fit :: Location -> BoundingBox -> SuperForm -> SuperForm
+fit l (w,h) s = let ((sx,sy),(sw,sh)) = bounds s 
+                    nf = minimum [ 1 -- never scale up
+                                 , (w / (sw + sx))
+                                 , (h / (sh + sy))] 
+                in (translate (l) . scale (nf,nf)) s
 
 circle :: Location -> Double -> Bool -> Color -> SuperForm
 circle loc rad fill col = primElev loc 
