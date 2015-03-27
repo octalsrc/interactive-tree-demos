@@ -97,7 +97,8 @@ writePrim c (l,p) =
             stroke c
             return ()
        Text (w,h) s ->
-         drawTextCenter (x,y) w h s c
+         do fillStyle 0 0 0 255 c
+            drawTextCenter (x,y) w h s c 
        Rekt (w,h) col ->
          do let (rc, gc, bc) = style col
             putStrLn ("Drawing a rekt...")

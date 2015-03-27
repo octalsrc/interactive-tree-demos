@@ -2,6 +2,8 @@ module Super.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
                    , top
+                   , sampleHeapTree
+                   , prepHeapTree
                    , qtUpMost
                    , sampleTree
                    , randomTrees
@@ -49,6 +51,13 @@ sampleTree i col =
                  (sampleTree (i - 1) ((nextColor . nextColor) col))
      else EmptyTree
 
+sampleHeapTree :: Int -> Int -> BiTree Int
+sampleHeapTree i n = 
+  if i > 0
+     then BiNode (sampleHeapTree (i - 1) (n + 1)) n
+                 (sampleHeapTree (i - 1) (n + 30))
+     else EmptyTree
+
 data BiTree a = EmptyTree 
               | BiNode (BiTree a) a (BiTree a) 
               deriving (Show, Eq)
@@ -79,6 +88,36 @@ top t = (t, Top)
 
 confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
+
+prepHeapTree :: Handler (BiTree Int)
+             -> BiTree Int
+             -> SuperForm
+prepHeapTree f tree = travHeap f (top tree)
+
+travHeap :: Handler (BiTree Int) 
+         -> QualTree Int
+         -> SuperForm
+travHeap fire (BiNode l (intn) r, c) = 
+  let qt = (BiNode l (intn) r, c)
+      loc = findLoc qt
+      linedest = findLoc (qtUp qt) - loc
+      node = (sketchHeapNode 
+                intn
+                linedest
+                [(return ((fst . qtUpMost . upheap) qt) >>= fire)])
+      bbs = bounds node
+  in combine 
+       [ (travHeap fire (qtLeft qt))
+       , (travHeap fire (qtRight qt))
+       --, translate loc (rekt (fst bbs) (snd bbs) Green)
+       , translate loc node           ]
+travHeap _ _ = blank
+
+upheap :: QualTree Int -> QualTree Int
+upheap (BiNode ll (intn) rr, (L v c r)) = (BiNode ll v rr, (L intn c r))
+upheap (BiNode ll (intn) rr, (R l v c)) = (BiNode ll v rr, (R l intn c))
+upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
+
 
 prepTree :: Handler (BiTree (Bool, Color)) 
          -> BiTree (Bool, Color) 
@@ -180,6 +219,17 @@ findX qt = case qt of
 --sketchNode :: Color -> Location -> [Primitive]
 --sketchNode col ploc = [ Line ploc 2
 --                      , Circle confSize True col ]
+sketchHeapNode :: Int -> Location -> [IO ()] -> SuperForm
+sketchHeapNode col ploc acs = 
+  let circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) Yellow
+      tex = text (idLocation) (confSize * 2, confSize * 1.2) (show col)
+  in combine [ line idLocation ploc 2
+             --, rekt (fst (bounds circ)) (snd (bounds circ)) Red 
+             , addOnClick 
+                 acs 
+                 circ 
+             , tex ] 
+
 
 sketchNode :: Color -> Location -> [IO ()] -> SuperForm
 sketchNode col ploc acs = 
