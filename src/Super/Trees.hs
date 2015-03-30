@@ -11,14 +11,10 @@ module Super.Trees ( BiTree (..)
                    , prepTree
                    , prepSTree ) where
 
--- import Control.Concurrent
-
 import Control.Event.Handler (Handler)
 import System.Random
 
--- import Super.Canvas.JS
 import Super.Canvas
-import Super.Canvas.Types
 
 confSize = 10
 distX = (1.5 * confSize)
@@ -69,8 +65,6 @@ data BTContext a = Top
 
 type QualTree a = (BiTree a, BTContext a)
 
---type TreeShift = ([Traveller], BiTree (Bool, Color))
-
 qtLeft   (BiNode l v r, c)   = ( l, L v c r )
 qtRight  (BiNode l v r, c)   = ( r, R l v c )
 
@@ -104,12 +98,10 @@ travHeap fire (BiNode l (intn) r, c) =
       node = (sketchHeapNode 
                 intn
                 linedest
-                [(return ((fst . qtUpMost . upheap) qt) >>= fire)])
-      bbs = bounds node
+                [(return ((fst . qtUpMost . upheap) qt) >>= fire)]) 
   in combine 
        [ (travHeap fire (qtLeft qt))
        , (travHeap fire (qtRight qt))
-       --, translate loc (rekt (fst bbs) (snd bbs) Green)
        , translate loc node           ]
 travHeap _ _ = blank
 
@@ -137,12 +129,10 @@ trav fire (BiNode l (True,col) r, c) =
                 col 
                 linedest
                 [fire (rotatos qt)])
-      bbs = bounds node
   in combine 
        [ (trav fire (qtLeft qt))
        , (trav fire (qtRight qt))
-       --, translate loc (rekt (fst bbs) (snd bbs) Green)
-       , translate loc node           ]
+       , translate loc node       ]
 trav _ _ = blank
 
 prepSTree = prepTree (\_ -> return ())
@@ -220,15 +210,11 @@ findX qt = case qt of
           let x' = nextX x l 
           in nextX (x' + 1) r
 
---sketchNode :: Color -> Location -> [Primitive]
---sketchNode col ploc = [ Line ploc 2
---                      , Circle confSize True col ]
 sketchHeapNode :: Int -> Location -> [IO ()] -> SuperForm
 sketchHeapNode col ploc acs = 
   let circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) Yellow
       tex = text (idLocation) (confSize * 2, confSize * 1.2) (show col)
   in combine [ line idLocation ploc 2
-             --, rekt (fst (bounds circ)) (snd (bounds circ)) Red 
              , addOnClick 
                  acs 
                  circ 
@@ -239,7 +225,6 @@ sketchNode :: Color -> Location -> [IO ()] -> SuperForm
 sketchNode col ploc acs = 
   let circ = circle idLocation confSize True col
   in combine [ line idLocation ploc 2
-             --, rekt (fst (bounds circ)) (snd (bounds circ)) Red
              , addOnClick 
                  acs 
                  circ ] 

@@ -15,6 +15,10 @@ module Super.Canvas ( circle
                     , travel
                     , getCanvas
                     , write
+                    , idFactor
+                    , idLocation
+                    , idVector
+                    , nextColor
                     , animate
                     , attachButton
                     , attachField

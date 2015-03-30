@@ -141,59 +141,10 @@ scalePrim f (Line v t) = Line (v * f) t
 scalePrim f (Text b s) = Text (b * f) s
 scalePrim f (Rekt b c) = Rekt (b * f) c
 
-{-
-        
-data Shape = Shape { bounds  :: BoundingBox 
-                   , coords  :: Location
-                   , prims   :: [Primitive]
-                   , actions :: [Action]    }
-
-instance Show Shape where
-  show (Shape b c p _) = show (b, c, p)
-        -}
 data Action = OnClick (IO ()) -- maybe later.. | MouseOver (IO ())
 
 actio (OnClick io) = io
---actio (MouseOver io) = io
 
 type QualAction = (Location, BoundingBox, Action)
 
 getIO (_,_,ac) = actio ac
-
-{-
-        
-type Layout a = (a -> Plate)
-
-scaleS :: Factor -> Shape -> Shape
-scaleS sc (Shape b c p a) = 
-  Shape (mul sc b) (mul sc c) p a
-
-mul (a,b) (c,d) = ( a * c , b * d )
-
-translateS :: Vector -> Shape -> Shape
-translateS (vx,vy) (Shape b (x,y) p a) = 
-  Shape b (x + vx, y + vy) p a
-
-getActions :: Plate -> [QualAction]
-getActions = 
-  foldr (\ (Shape b c _ as) mas -> 
-           (fmap (qual c b) as) ++ mas) []
-
-qual c b ac = (c,b,ac)
-
-type Plate = [Shape]
-
-scale :: Factor -> Plate -> Plate
-scale f = fmap (scaleS f)
-
-translate :: Vector -> Plate -> Plate
-translate v = fmap (translateS v)
-
-class Animate a where
-  animate :: Int   -- duration of animation (ms)
-          -> Int   -- # frames of animation
-          -> a     -- thing to animate
-          -> IO () -- (blocking) animation action
-
-type Traveller = (Plate, Location, Location)
-        -}
