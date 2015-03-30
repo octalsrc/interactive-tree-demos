@@ -43,7 +43,7 @@ mkNet sc ref t button field fire =
      reactimate (fmap (newtrees fire) (bNum <@ eButton))
 
 display :: SuperCanvas -> ([SuperForm], SuperForm) -> IO ()
-display sc (as,s) = animate sc (100 * 1000) as >> write sc s
+display sc (as,s) = animate sc (150 * 1000) as >> write sc s
 
 newtrees t n = do g <- newStdGen
                   let (rando,_) = random g
@@ -63,7 +63,7 @@ format :: Handler ( BiTree (Bool, Color)
        -> ([SuperForm], SuperForm)
 format fire (ref, (ani, nxt)) = 
   let pRef = fit (50,50) (200,200) (prepSTree ref)
-      pAni = fmap (fit (50,300) (200,180)) (travel 10 ani)
+      pAni = fmap (fit (50,300) (200,180)) (travel 4 ani)
       pNxt = fit (50,300) 
                  (200, 180) 
                  (prepTree (\b -> fire (ref,b)) nxt)

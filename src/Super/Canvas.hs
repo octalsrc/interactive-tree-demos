@@ -33,6 +33,7 @@ import Super.Canvas.JS
 data SuperCanvas = SC Context (Handler [QualAction])
 
 travel :: Int -> [(Vector, SuperForm)] -> [SuperForm]
+travel _ [] = [] 
 travel i as = 
   let num = fromIntegral i
       vnum = (num,num)
