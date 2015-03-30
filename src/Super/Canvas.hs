@@ -5,6 +5,9 @@ module Super.Canvas ( circle
                     , rekt
                     , blank
                     , combine
+                    , Location
+                    , Vector
+                    , BoundingBox 
                     , scale
                     , onClick
                     , addOnClick

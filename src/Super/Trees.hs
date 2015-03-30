@@ -119,12 +119,14 @@ upheap (BiNode ll (intn) rr, (R l v c)) = (BiNode ll v rr, (R l intn c))
 upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
 
 
-prepTree :: Handler (BiTree (Bool, Color)) 
+prepTree :: Handler ( [(Vector, SuperForm)] 
+                    , BiTree (Bool, Color)  ) 
          -> BiTree (Bool, Color) 
          -> SuperForm
 prepTree f tree = trav f (top tree)
 
-trav :: Handler (BiTree (Bool, Color)) 
+trav :: Handler ( [(Vector, SuperForm)]
+                , BiTree (Bool, Color)  ) 
      -> QualTree (Bool, Color)
      -> SuperForm
 trav fire (BiNode l (True,col) r, c) = 
@@ -134,7 +136,7 @@ trav fire (BiNode l (True,col) r, c) =
       node = (sketchNode 
                 col 
                 linedest
-                [(return (rotatos qt) >>= fire)])
+                [fire (rotatos qt)])
       bbs = bounds node
   in combine 
        [ (trav fire (qtLeft qt))
@@ -152,41 +154,43 @@ prepRTree qt = let rloc = findLoc (qtUpMost qt)
 mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
 mkInvis t = t
 
-rotatos qt = (fst . qtUpMost . rotate) qt
-rotatos' qt = ([], fst . qtUpMost . rotate $ qt)
-{-
-rotatos :: QualTree (Bool, Color) -> TreeShift
+rotatos :: QualTree (Bool, Color) 
+        -> ( [(Vector, SuperForm)]
+           , BiTree (Bool, Color)  )
 rotatos (t, Top) = ([], t)
 rotatos qt = ( [ rTopTree qt
                , rBottomTree qt
                , rUpTree qt
                , rDownTree qt ]
              , (fst . qtUpMost . rotate) qt )
-  where qtcull = case qt of
-                   (_, L _ _ _) -> qtRight
-                   (_, R _ _ _) -> qtLeft
-        -}
+
 qtCull qt = case qt of
               (_, L _ _ _) -> qtRight qt
               (_, R _ _ _) -> qtLeft qt
 
 rUpTree qt = let rqt = rotate qt
-             in ( prepRTree ((qtUp . mkInvis . qtCull) qt)
-                , findLoc qt, findLoc rqt)
+             in ( findLoc rqt - findLoc qt
+                , translate (findLoc qt) 
+                            (prepRTree 
+                               ((qtUp . mkInvis . qtCull) qt)) )
 
 rDownTree qt = let rqt = rotate qt
                    desc = case qt of
                             (_, L _ _ _) -> qtRight
                             (_, R _ _ _) -> qtLeft
-               in ( prepRTree ((qtUp . mkInvis) qt)
-                  , findLoc (qtUp qt), findLoc (desc rqt))
+               in ( findLoc (desc rqt) - findLoc (qtUp qt)
+                  , translate 
+                      (findLoc (qtUp qt)) 
+                      (prepRTree ((qtUp . mkInvis) qt)) )
 
-rTopTree qt = ( prepSTree ((fst . qtUpMost . mkInvis . qtUp) qt)
-              , (0,0), (0,0))
+rTopTree qt = ( (0,0)
+              , prepSTree 
+                  ((fst . qtUpMost . mkInvis . qtUp) qt) )
 
-rBottomTree qt = ( prepRTree (qtCull qt)
-                 , findLoc (qtCull qt)
-                 , findLoc (qtCull qt) )
+rBottomTree qt = ( (0,0)
+                 , translate 
+                     (findLoc (qtCull qt))
+                     (prepRTree (qtCull qt)) )
 
 findLoc :: QualTree a -> Location
 findLoc tree = (tx (findX tree), ty (depthOf tree - 1))
