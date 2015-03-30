@@ -17,6 +17,7 @@ module Super.Canvas.JS ( getCanvas
                        , attachField
                        , clearcan
                        , writeToCanvas
+                       , animateToCanvas
                        , attachClickHandler
                        , Context ) where
 
@@ -66,6 +67,12 @@ getMousePos ev = do x <- ffiGetMX ev
                     return (fromIntegral x, fromIntegral y)
 
 clearcan = clearRect 0 0 900 500
+
+animateToCanvas :: Context -> Int -> [[Draw]] -> IO ()
+animateToCanvas c i !pss = 
+  sequence_ (fmap (writeWait c i) pss)
+
+writeWait c i ps = writeToCanvas c ps >> threadDelay i
 
 writeToCanvas :: Context -> [Draw] -> IO ()
 writeToCanvas c !prims = 

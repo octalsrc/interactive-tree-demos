@@ -9,8 +9,10 @@ module Super.Canvas ( circle
                     , onClick
                     , addOnClick
                     , translate
+                    , travel
                     , getCanvas
                     , write
+                    , animate
                     , attachButton
                     , attachField
                     , Color (..)
@@ -26,6 +28,20 @@ import Super.Canvas.Types
 import Super.Canvas.JS
 
 data SuperCanvas = SC Context (Handler [QualAction])
+
+travel :: Int -> [(Vector, SuperForm)] -> [SuperForm]
+travel i as = 
+  let num = fromIntegral i
+      vnum = (num,num)
+      steps = [1..i]
+      dist i d = d * (fromIntegral i 
+                     ,fromIntegral i) / vnum
+      leaf i (d,sf) = Leaf (Trans (dist i d) sf)
+  in fmap (\i -> Node (fmap (leaf i) as)) steps
+
+animate :: SuperCanvas -> Int -> [SuperForm] -> IO ()
+animate (SC cx newAc) i sfs = 
+  newAc [] >> animateToCanvas cx i (fmap draws sfs)
 
 write :: SuperCanvas -> SuperForm -> IO ()
 write (SC cx newAc) sf = 
