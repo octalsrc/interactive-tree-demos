@@ -41,7 +41,7 @@ travel _ [] = []
 travel i as = 
   let num = fromIntegral i
       vnum = (num,num)
-      steps = [1..i]
+      steps = [0 .. (i - 1)]
       dist i d = d * (fromIntegral i 
                      ,fromIntegral i) / vnum
       leaf i (d,sf) = Leaf (Trans (dist i d) sf)
