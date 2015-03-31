@@ -4,15 +4,15 @@ module Super.Trees ( BiTree (..)
                    , top
                    , sampleHeapTree
                    , prepHeapTree
-                   , qtUpMost
-                   , sampleTree
-                   , randomTrees
+                   , qtUpMost 
+                   , randomColorTrees
                    , rotate
                    , prepTree
                    , prepSTree ) where
 
 import Control.Event.Handler (Handler)
 import System.Random
+import qualified Data.List as L
 
 import Super.Canvas
 
@@ -20,32 +20,25 @@ confSize = 10
 distX = (1.5 * confSize)
 distY = (2.5 * confSize)
 
-randomTrees :: Int -> Int -> (BiTree (Bool, Color), BiTree (Bool, Color))
-randomTrees i r = let g = mkStdGen r
-                      (col,g') = (random g)
-                      bs = (randoms g) :: [Bool]
-                      bs' = (randoms g') :: [Bool]
-                      tree = sampleTree i col 
-                  in ( (fst . qtUpMost . fst) (walk (top tree) bs)
-                     , (fst . qtUpMost . fst) (walk (top tree) bs') )
+randomColorTrees :: Int 
+                 -> Int 
+                 -> ( BiTree (Bool, Color)
+                    , BiTree (Bool, Color) )
+randomColorTrees i r = 
+  let g1 = mkStdGen r
+      (g2,g3) = split g1
+      nodes = take i (zip (repeat True) 
+                          (randoms g1 :: [Color]))
+  in (randomTree nodes g2, randomTree nodes g3)
 
-walk (EmptyTree, c) (b:bs) = ((EmptyTree, c), bs)
-walk (BiNode l v r, c) (a:b:bs) = 
-  let tree = (BiNode l v r,c)
-      newr = if b
-                then (fst . qtUpMost . fst) (walk (r,Top) bs)
-                else r
-      newtree = (BiNode l v newr,c)
-      ltree = if a
-                 then (qtLeft . rotate) newtree
-                 else qtLeft newtree
-  in walk (ltree) bs
-
-sampleTree i col = 
-  if i > 0
-     then BiNode (sampleTree (i - 1) (nextColor col)) (True, col)
-                 (sampleTree (i - 1) ((nextColor . nextColor) col))
-     else EmptyTree
+randomTree :: [a] -> StdGen -> BiTree a
+randomTree [] _ = EmptyTree
+randomTree as g1 = let (root,g2) = randomR (0, length as - 1) g1
+                       (g3,g4) = split g2
+                       (l, (v : r)) = L.splitAt root as
+                  in BiNode (randomTree l g3)
+                            v
+                            (randomTree r g4)
 
 sampleHeapTree :: Int -> Int -> BiTree Int
 sampleHeapTree i n = 

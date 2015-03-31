@@ -17,7 +17,7 @@ treestuff sc =
      attachField "numlevels" (snd fd)
      g <- newStdGen
      let (rando,g') = random g
-         (ref,nxt) = randomTrees 4 rando
+         (ref,nxt) = randomColorTrees 16 rando
      network <- compile (mkNet sc
                                ref 
                                (fst t)
@@ -47,7 +47,7 @@ display sc (as,s) = animate sc (150 * 1000) as >> write sc s
 
 newtrees t n = do g <- newStdGen
                   let (rando,_) = random g
-                      (ref,nxt) = randomTrees n rando
+                      (ref,nxt) = randomColorTrees n rando
                   t (ref,([],nxt))
 
 tryread n s = case readMaybe s of
