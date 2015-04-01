@@ -13,6 +13,7 @@ module Super.Canvas.JS ( getCanvas
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
+import System.Random (newStdGen)
 
 import GHCJS.Foreign
 import GHCJS.Types
@@ -40,7 +41,7 @@ attachClickHandler name c = do can <- selp ("#" ++ name)
                                return ()
 
 attachButton name b = do but <- selp ("#" ++ name)
-                         let h ev = b =<< return ()
+                         let h ev = b =<< newStdGen
                          click h def but
                          return ()
                          
@@ -103,6 +104,7 @@ writePrim c (l,p) =
             fillRect x y w h c
             return ()
 
+style White = (255,255,255)
 style Red = (255, 0, 0)
 style Green = (0, 190, 0)
 style Blue = (0, 0, 230)

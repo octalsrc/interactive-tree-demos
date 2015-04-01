@@ -85,7 +85,7 @@ bounds sc =
   in ( (minimum xl, minimum yl)
      , (maximum xs - minimum xl, maximum ys - minimum yl))
 
-data Color = Red | Green | Blue | Yellow 
+data Color = Red | Green | Blue | Yellow | White
              deriving (Show, Enum, Bounded, Eq)
 
 instance Random Color where
@@ -97,7 +97,7 @@ instance Random Color where
                                  , fromEnum b) g of
                       (r,g') -> (toEnum r, g')
 
-nextColor Yellow = Red
+nextColor Yellow = White
 nextColor c = succ c
 
 -- Be careful! this is not really a complete instance!

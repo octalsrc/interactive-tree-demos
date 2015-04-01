@@ -2,6 +2,7 @@ module Super.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
                    , randomTree
+                   , randomChild
                    , top
                    , sampleHeapTree
                    , prepHeapTree
@@ -30,6 +31,13 @@ randomTree as g1 = let (root,g2) = randomR (0, length as - 1) g1
                              v
                              (randomTree r g4)
 
+randomChild :: StdGen -> QualTree a -> QualTree a
+randomChild _ (EmptyTree,c) = (EmptyTree,c)
+randomChild g t = let (dir,ng) = random g
+                  in if dir
+                        then randomChild ng (qtLeft t)
+                        else randomChild ng (qtRight t)
+
 sampleHeapTree :: Int -> Int -> BiTree Int
 sampleHeapTree i n = 
   if i > 0
@@ -40,6 +48,10 @@ sampleHeapTree i n =
 data BiTree a = EmptyTree 
               | BiNode (BiTree a) a (BiTree a) 
               deriving (Show, Eq)
+
+instance Functor BiTree where
+  fmap f EmptyTree = EmptyTree
+  fmap f (BiNode l v r) = BiNode (fmap f l) (f v) (fmap f r)
 
 data BTContext a = Top
                  | L a (BTContext a) (BiTree a)
@@ -66,19 +78,20 @@ top t = (t, Top)
 confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
 
-prepHeapTree :: Handler (BiTree Int)
-             -> BiTree Int
+prepHeapTree :: Handler (BiTree (Bool,Int))
+             -> BiTree (Bool,Int)
              -> SuperForm
 prepHeapTree f tree = travHeap f (top tree)
 
-travHeap :: Handler (BiTree Int) 
-         -> QualTree Int
+travHeap :: Handler (BiTree (Bool,Int)) 
+         -> QualTree (Bool,Int)
          -> SuperForm
-travHeap fire (BiNode l (intn) r, c) = 
-  let qt = (BiNode l (intn) r, c)
+travHeap fire (BiNode l (bl,intn) r, c) = 
+  let qt = (BiNode l (bl,intn) r, c)
       loc = findLoc qt
       linedest = findLoc (qtUp qt) - loc
       node = (sketchHeapNode 
+                bl
                 intn
                 linedest
                 [(return ((fst . qtUpMost . upheap) qt) >>= fire)]) 
@@ -88,7 +101,7 @@ travHeap fire (BiNode l (intn) r, c) =
        , translate loc node           ]
 travHeap _ _ = blank
 
-upheap :: QualTree Int -> QualTree Int
+upheap :: QualTree a -> QualTree a
 upheap (BiNode ll (intn) rr, (L v c r)) = (BiNode ll v rr, (L intn c r))
 upheap (BiNode ll (intn) rr, (R l v c)) = (BiNode ll v rr, (R l intn c))
 upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
@@ -193,15 +206,22 @@ findX qt = case qt of
           let x' = nextX x l 
           in nextX (x' + 1) r
 
-sketchHeapNode :: Int -> Location -> [IO ()] -> SuperForm
-sketchHeapNode col ploc acs = 
-  let circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) Yellow
+sketchHeapNode :: Bool -> Int -> Location -> [IO ()] -> SuperForm
+sketchHeapNode bl col ploc acs = 
+  let rcolor = if bl
+                  then Yellow
+                  else White
+      circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) rcolor
       tex = text (idLocation) (confSize * 2, confSize * 1.2) (show col)
-  in combine [ line idLocation ploc 2
-             , addOnClick 
-                 acs 
-                 circ 
-             , tex ] 
+  in if bl
+        then combine [ line idLocation ploc 2
+                     , addOnClick 
+                         acs 
+                         circ 
+                     , tex ] 
+        else combine [ line idLocation ploc 2
+                     , circ
+                     , tex ]
 
 
 sketchNode :: Color -> Location -> [IO ()] -> SuperForm
