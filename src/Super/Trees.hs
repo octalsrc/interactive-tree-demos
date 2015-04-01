@@ -1,11 +1,11 @@
 module Super.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
+                   , randomTree
                    , top
                    , sampleHeapTree
                    , prepHeapTree
                    , qtUpMost 
-                   , randomColorTrees
                    , rotate
                    , prepTree
                    , prepSTree ) where
@@ -20,25 +20,15 @@ confSize = 10
 distX = (1.5 * confSize)
 distY = (2.5 * confSize)
 
-randomColorTrees :: Int 
-                 -> Int 
-                 -> ( BiTree (Bool, Color)
-                    , BiTree (Bool, Color) )
-randomColorTrees i r = 
-  let g1 = mkStdGen r
-      (g2,g3) = split g1
-      nodes = take i (zip (repeat True) 
-                          (randoms g1 :: [Color]))
-  in (randomTree nodes g2, randomTree nodes g3)
 
 randomTree :: [a] -> StdGen -> BiTree a
 randomTree [] _ = EmptyTree
 randomTree as g1 = let (root,g2) = randomR (0, length as - 1) g1
                        (g3,g4) = split g2
                        (l, (v : r)) = L.splitAt root as
-                  in BiNode (randomTree l g3)
-                            v
-                            (randomTree r g4)
+                   in BiNode (randomTree l g3)
+                             v
+                             (randomTree r g4)
 
 sampleHeapTree :: Int -> Int -> BiTree Int
 sampleHeapTree i n = 

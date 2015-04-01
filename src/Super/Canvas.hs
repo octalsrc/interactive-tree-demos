@@ -5,6 +5,7 @@ module Super.Canvas ( circle
                     , rekt
                     , blank
                     , combine
+                    , TravelGroup
                     , Location
                     , Vector
                     , BoundingBox 
@@ -36,7 +37,9 @@ import Super.Canvas.JS
 
 data SuperCanvas = SC Context (Handler [QualAction])
 
-travel :: Int -> [(Vector, SuperForm)] -> [SuperForm]
+type TravelGroup = [(Vector, SuperForm)]
+
+travel :: Int -> TravelGroup -> [SuperForm]
 travel _ [] = [] 
 travel i as = 
   let num = fromIntegral i

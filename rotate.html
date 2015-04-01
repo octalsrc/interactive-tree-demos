@@ -1,14 +1,27 @@
 <html>
-  <body style="background: lightgray;">
+  <body style="font-size: 1.3em; width: 700; background: lightgray;">
     <script language="javascript" src="rotate.js"></script>
+
     <h1>Rotating Binary Trees</h1>
-    <input id="numlevels" type="text" name="a" />
-    <button id="gen">New Trees</button>
-    <div id="num"></div>
-    <canvas id="thecanvas" height="500" width="900" style="background: lightgray;"></canvas>
-    <p style="font-size: 1.3em; width: 700;">Can you match the bottom tree with the top tree
-      by performing tree rotations?  Click nodes in the
-      bottom tree to rotate them.</p>
+    
+    <p >
+      Can you match the bottom tree with the top tree by performing
+      tree rotations?  Click nodes in the <span style="font-weight:
+      bold;">bottom</span> tree to rotate them.</p>
+    
+    <canvas id="thecanvas" height="500" width="900"
+	    style="background: lightgray;"></canvas>
+
+    <div style="height: 4;"></div>
+    
+    <span> Start new game with </span>
+    <input id="numnodes" type="text" name="a" value="12"
+	   style="width: 2em; font-size: 1.2em; text-align: center;" />
+    <span> nodes
+      <span style="monospace">--&gt</span>
+    </span>
+    <button id="gen" style="font-size: 1.2em;">New Trees</button>
+    
   </body>
 </html>
 
