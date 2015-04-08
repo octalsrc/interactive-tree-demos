@@ -97,7 +97,7 @@ instance Random Color where
                                  , fromEnum b) g of
                       (r,g') -> (toEnum r, g')
 
-nextColor Yellow = White
+nextColor White = Red
 nextColor c = succ c
 
 -- Be careful! this is not really a complete instance!

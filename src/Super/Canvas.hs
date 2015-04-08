@@ -21,6 +21,7 @@ module Super.Canvas ( circle
                     , idVector
                     , nextColor
                     , animate
+                    , changeValue
                     , attachButton
                     , attachField
                     , Color (..)

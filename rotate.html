@@ -1,26 +1,37 @@
 <html>
-  <body style="font-size: 1.3em; width: 700; background: lightgray;">
+  <body style="width: 700; background: lightgray;">
     <script language="javascript" src="rotate.js"></script>
 
     <h1>Rotating Binary Trees</h1>
     
-    <p >
+    <p style="font-size: 1.3em;">
       Can you match the bottom tree with the top tree by performing
       tree rotations?  Click nodes in the <span style="font-weight:
       bold;">bottom</span> tree to rotate them.</p>
+
+    <p style="font-size: 1.3em;">
+      The Seed for these trees is: <span id="tellseed" style="color:
+      blue;"></span>
+    </p>
     
     <canvas id="thecanvas" height="500" width="900"
 	    style="background: lightgray;"></canvas>
 
     <div style="height: 4;"></div>
+
+    <button id="gen">Restart</button>
     
-    <span> Start new game with </span>
-    <input id="numnodes" type="text" name="a" value="12"
-	   style="width: 2em; font-size: 1.2em; text-align: center;" />
-    <span> nodes
-      <span style="monospace">--&gt</span>
-    </span>
-    <button id="gen" style="font-size: 1.2em;">New Game</button>
+    <div class="space" style="height: 0.6em;"></div>
+    
+    <span> Number of Nodes: </span>
+    <input id="numnodes" type="text" name="a" value="16"
+	   style="width: 2.5em; text-align: center;" />
+    
+    <div class="space" style="height: 0.6em;"></div>
+    
+    <span> Seed (Optional): </span>
+    <input id ="seed" type="text" name="b" value="" />
+
     
   </body>
 </html>

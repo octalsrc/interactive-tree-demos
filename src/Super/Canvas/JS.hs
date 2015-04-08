@@ -9,6 +9,7 @@ module Super.Canvas.JS ( getCanvas
                        , writeToCanvas
                        , animateToCanvas
                        , attachClickHandler
+                       , changeValue
                        , Context ) where
 
 import Data.Default (def)
@@ -30,6 +31,10 @@ canvasName = "thecanvas"
 selp = select . pack
 
 sCanvas = selp ("#" ++ canvasName)
+
+changeValue name val = do x <- selp ("#" ++ name)
+                          setText (pack val) x
+                          return ()
 
 getCanvas name = selp ("#" ++ name)
                  >>= indexArray 0 . castRef 

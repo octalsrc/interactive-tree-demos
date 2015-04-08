@@ -9,7 +9,7 @@ import Super.Trees
 
 {- Config -}
 
-defaultNodeCount = 12
+defaultNodeCount = 16
 
 treeAreaSize = (800, 195)
 
@@ -25,39 +25,52 @@ treestuff sc =
      attachButton "gen" (snd b)
      fd <- newAddHandler
      attachField "numnodes" (snd fd)
+     seedH <- newAddHandler
+     attachField "seed" (snd seedH)
      g <- newStdGen
      let (rando,g') = random g
-         (ref,nxt) = randomColorTrees 16 rando
+         (ref,nxt) = randomColorTrees 
+                       defaultNodeCount 
+                       rando
      network <- compile (mkNet sc
                                ref 
                                (fst t)
                                (fst b)
                                (fst fd)
+                               (fst seedH)
                                (snd t))
      actuate network
+     changeValue "tellseed" (show rando)
      (snd t) (ref, ([], nxt))
      putStrLn "Started?"
      return ()
 
-mkNet sc ref t button field fire = 
+mkNet sc ref t button field seedH fire = 
   do eTrees <- fromAddHandler t
      eButton <- fromAddHandler button
      eField <- fromAddHandler field
+     eSeed <- fromAddHandler seedH
      let eNums = fmap (tryread defaultNodeCount) eField
          bNum = stepper defaultNodeCount eNums
+         eSeedNums = fmap (tryread 0) eSeed
+         bSeedNums = stepper 0 eSeedNums
+         bGenInfo = (,) <$> bNum <*> bSeedNums
          bRef = stepper ref (fmap fst eTrees)
          eTreeForms = fmap (format fire) eTrees 
          eForms = eTreeForms
      reactimate (fmap (display sc) eForms)
-     reactimate (fmap (newtrees fire) (bNum <@ eButton))
+     reactimate (fmap (newtrees fire) (bGenInfo <@ eButton))
 
 display :: SuperCanvas -> OutputSet -> IO ()
 display sc (as,s) = animate sc (75 * 1000) as >> write sc s
 
-newtrees t n = do g <- newStdGen
-                  let (rando,_) = random g
-                      (ref,nxt) = randomColorTrees n rando
-                  t (ref,([],nxt))
+newtrees t (n,r) = do g <- newStdGen
+                      let (rando) = if r == 0
+                                       then fst (random g) 
+                                       else r
+                          (ref,nxt) = randomColorTrees n rando
+                      changeValue "tellseed" (show rando)
+                      t (ref,([],nxt))
 
 tryread n s = case readMaybe s of
                 Just i -> i
@@ -85,6 +98,7 @@ randomColorTrees :: Int -> Int -> (ColorTree, ColorTree)
 randomColorTrees i r = 
   let g1 = mkStdGen r
       (g2,g3) = split g1
-      nodes = take i (zip (repeat True) (randoms g1))
+      nodes = take i (zip (repeat True) 
+                          (randomRs (Red,Yellow) g1))
       tree = randomTree nodes 
   in (tree g2, tree g3)
