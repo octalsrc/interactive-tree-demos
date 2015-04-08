@@ -9,7 +9,7 @@ import Super.Trees
 
 main = startCanvas "thecanvas" >>= treestuff
 
-type HeapTree = BiTree (Bool, Int)
+type HeapTree = BiTree (Int, Bool)
 
 treestuff sc = 
   do t <- newAddHandler
@@ -45,19 +45,21 @@ addNode' t g = addNode g t
 addNode :: StdGen -> HeapTree -> HeapTree
 addNode g = (\(a,_) -> a)
             . qtUpMost
-            . insertNew (newNode g) g
+            . insertNew' (newNode g) g
             . (\a -> (a,Top))
             . clean
 
 randRange = (10,99)
 
-newNode g = (True, fst $ randomR randRange g)
+newNode g = (fst $ randomR randRange g, True)
 
 clean :: HeapTree -> HeapTree
-clean = fmap (\(b,v) -> (False,v))
+clean = fmap (\(v,_) -> (v,False))
 
 randomHeapTree i g = 
-  randomTree(fmap (\a -> (False,a)) (take i (randomRs randRange g))) g
+  makeHeap (fmap (\a -> (a,False)) (take i (randomRs randRange g)))
+
+insertNew' node _ (t,c) = (heapCarelessInsert node t, c)
 
 insertNew node g qt = 
   ( (\(t,c) -> (BiNode EmptyTree node EmptyTree,c))

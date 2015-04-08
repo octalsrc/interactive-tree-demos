@@ -2,6 +2,9 @@ module Super.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
                    , randomTree
+                   , makeHeap
+                   , heapInsert
+                   , heapCarelessInsert
                    , randomChild
                    , top
                    , sampleHeapTree
@@ -30,6 +33,40 @@ randomTree as g1 = let (root,g2) = randomR (0, length as - 1) g1
                    in BiNode (randomTree l g3)
                              v
                              (randomTree r g4)
+
+heapInsert :: Ord a => a -> BiTree a -> BiTree a
+heapInsert v EmptyTree = BiNode EmptyTree v EmptyTree
+heapInsert v (BiNode l n r) = 
+  if v > n
+     then heapInsert n (BiNode l v r)
+     else if shallow l > shallow r
+             then BiNode l n (heapInsert v r)
+             else BiNode (heapInsert v l) n r
+
+heapCarelessInsert :: Ord a => a -> BiTree a -> BiTree a
+heapCarelessInsert v EmptyTree = BiNode EmptyTree v EmptyTree
+heapCarelessInsert v (BiNode l n r) = 
+  if shallow l > shallow r
+     then BiNode l n (heapCarelessInsert v r)
+     else BiNode (heapCarelessInsert v l) n r 
+
+
+makeHeap :: Ord a => [a] -> BiTree a
+makeHeap = foldr heapInsert EmptyTree
+
+makeHeap' :: Ord a => [a] -> BiTree a
+makeHeap' [] = EmptyTree
+makeHeap' as = let root = indexG 0 (head as) 0 as
+                   (l, (v : r)) = L.splitAt root as
+               in BiNode (makeHeap' l)
+                         v
+                         (makeHeap' r)
+
+indexG :: Ord a => Int -> a -> Int -> [a] -> Int
+indexG i gv gi [] = gi
+indexG i gv gi (a:as) = if a > gv
+                           then indexG (i+1) a i as
+                           else indexG (i+1) gv gi as
 
 randomChild :: StdGen -> QualTree a -> QualTree a
 randomChild _ (EmptyTree,c) = (EmptyTree,c)
@@ -78,16 +115,16 @@ top t = (t, Top)
 confSize' = (confSize, confSize)
 confSize'' = (confSize * 2, confSize * 2)
 
-prepHeapTree :: Handler (BiTree (Bool,Int))
-             -> BiTree (Bool,Int)
+prepHeapTree :: Handler (BiTree (Int,Bool))
+             -> BiTree (Int,Bool)
              -> SuperForm
 prepHeapTree f tree = travHeap f (top tree)
 
-travHeap :: Handler (BiTree (Bool,Int)) 
-         -> QualTree (Bool,Int)
+travHeap :: Handler (BiTree (Int,Bool)) 
+         -> QualTree (Int,Bool)
          -> SuperForm
-travHeap fire (BiNode l (bl,intn) r, c) = 
-  let qt = (BiNode l (bl,intn) r, c)
+travHeap fire (BiNode l (intn,bl) r, c) = 
+  let qt = (BiNode l (intn,bl) r, c)
       loc = findLoc qt
       linedest = findLoc (qtUp qt) - loc
       node = (sketchHeapNode 
@@ -235,6 +272,10 @@ sketchNode col ploc acs =
 depth :: BiTree a -> Int
 depth EmptyTree = 0
 depth (BiNode l _ r) = (max (depth l) (depth r)) + 1
+
+shallow :: BiTree a -> Int
+shallow EmptyTree = 0
+shallow (BiNode l _ r) = (min (shallow l) (shallow r)) + 1
 
 depthOf :: QualTree a -> Int
 depthOf (_, Top) = 1
