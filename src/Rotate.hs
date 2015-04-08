@@ -11,6 +11,8 @@ import Super.Trees
 
 defaultNodeCount = 16
 
+timeAmount = 60 :: Int
+
 treeAreaSize = (800, 195)
 
 main = startCanvas "thecanvas" >>= treestuff
@@ -27,6 +29,8 @@ treestuff sc =
      attachField "numnodes" (snd fd)
      seedH <- newAddHandler
      attachField "seed" (snd seedH)
+     tm <- newAddHandler
+     res <- newAddHandler
      g <- newStdGen
      let (rando,g') = random g
          (ref,nxt) = randomColorTrees 
@@ -38,19 +42,28 @@ treestuff sc =
                                (fst b)
                                (fst fd)
                                (fst seedH)
-                               (snd t))
+                               (fst tm)
+                               (fst res)
+                               (snd t)
+                               (snd res))
      actuate network
      changeValue "tellseed" (show rando)
      (snd t) (ref, ([], nxt))
+     startTimer 1000000 (snd tm)
      putStrLn "Started?"
      return ()
 
-mkNet sc ref t button field seedH fire = 
+mkNet sc ref t button field seedH timeH resetH fire reset = 
   do eTrees <- fromAddHandler t
      eButton <- fromAddHandler button
      eField <- fromAddHandler field
      eSeed <- fromAddHandler seedH
-     let eNums = fmap (tryread defaultNodeCount) eField
+     eTimer <- fromAddHandler timeH
+     eResets <- fromAddHandler resetH
+     let bTime = accumB timeAmount 
+                        ((timeUpd <$ eTimer)
+                              `union` (timeRes <$ eResets))
+         eNums = fmap (tryread defaultNodeCount) eField
          bNum = stepper defaultNodeCount eNums
          eSeedNums = fmap (tryread 0) eSeed
          bSeedNums = stepper 0 eSeedNums
@@ -58,19 +71,44 @@ mkNet sc ref t button field seedH fire =
          bRef = stepper ref (fmap fst eTrees)
          eTreeForms = fmap (format fire) eTrees 
          eForms = eTreeForms
+         bTrees = stepper (EmptyTree, ([], EmptyTree)) eTrees
+     timerC <- changes ((,) <$> bTime <*> bTrees)
+     reactimate' (fmap (evalState sc) <$> timerC)
      reactimate (fmap (display sc) eForms)
-     reactimate (fmap (newtrees fire) (bGenInfo <@ eButton))
+     reactimate (fmap (newtrees reset fire) (bGenInfo <@ eButton))
+
+timeRes _ = timeAmount
+
+evalState :: SuperCanvas -> (Int, GameState) -> IO ()
+evalState sc (t,g) = do changeValue "timer" (show t)
+                        if t <= 0
+                           then (write sc 
+                                 . addGameOver
+                                 . snd
+                                 . format (\_ -> return ())) g
+                           else return ()
+
+addGameOver :: SuperForm -> SuperForm
+addGameOver sf = combine [ text (500,300)
+                                (200,150)
+                                "Game Over"
+                         , sf ]
 
 display :: SuperCanvas -> OutputSet -> IO ()
 display sc (as,s) = animate sc (75 * 1000) as >> write sc s
 
-newtrees t (n,r) = do g <- newStdGen
-                      let (rando) = if r == 0
-                                       then fst (random g) 
-                                       else r
-                          (ref,nxt) = randomColorTrees n rando
-                      changeValue "tellseed" (show rando)
-                      t (ref,([],nxt))
+timeUpd t = if t <= 0
+               then t
+               else t - 1
+
+newtrees res t (n,r) = do g <- newStdGen
+                          res ()
+                          let (rando) = if r == 0
+                                           then fst (random g) 
+                                           else r
+                              (ref,nxt) = randomColorTrees n rando
+                          changeValue "tellseed" (show rando)
+                          t (ref,([],nxt))
 
 tryread n s = case readMaybe s of
                 Just i -> i

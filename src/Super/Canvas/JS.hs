@@ -10,6 +10,7 @@ module Super.Canvas.JS ( getCanvas
                        , animateToCanvas
                        , attachClickHandler
                        , changeValue
+                       , startTimer
                        , Context ) where
 
 import Data.Default (def)
@@ -31,6 +32,9 @@ canvasName = "thecanvas"
 selp = select . pack
 
 sCanvas = selp ("#" ++ canvasName)
+
+startTimer time out = 
+  forkIO (forever (threadDelay time >> out ()))
 
 changeValue name val = do x <- selp ("#" ++ name)
                           setText (pack val) x

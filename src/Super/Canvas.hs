@@ -5,6 +5,7 @@ module Super.Canvas ( circle
                     , rekt
                     , blank
                     , combine
+                    , emptyForm
                     , TravelGroup
                     , Location
                     , Vector
@@ -23,6 +24,7 @@ module Super.Canvas ( circle
                     , animate
                     , changeValue
                     , attachButton
+                    , startTimer
                     , attachField
                     , Color (..)
                     , SuperCanvas
@@ -91,6 +93,8 @@ checkB (x,y) ((a,b),(w,h),_) = x >= a
                                && x <= (a + w)
                                && y >= b
                                && y <= (b + h) 
+
+emptyForm = Node []
 
 fit :: Location -> BoundingBox -> SuperForm -> SuperForm
 fit l (w,h) s = let ((sx,sy),(sw,sh)) = bounds s 
