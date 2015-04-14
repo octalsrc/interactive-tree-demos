@@ -26,47 +26,63 @@ module Super.Canvas.Types ( Primitive (..)
                           , Action (..) ) where
 
 import System.Random
+import qualified Data.List as L
 
 data SuperForm = Node [SuperForm]
-             | Leaf SCLeaf
+               | Leaf SCLeaf
 
 data SCLeaf = Scale Factor SuperForm
             | Trans Vector SuperForm
+            | Travel Vector SuperForm
             | Elem SCElem
 
 data SCElem = Prim Primitive
             | Trigger BoundingBox [Action]
             | Bounds BoundingBox
 
-type QElem = (Location, Factor, SCElem)
+type QElem = (Location, Factor, Vector, SCElem)
 
-qList :: SuperForm -> [QElem]
-qList = r initLoc initFactor
+qList :: Int -> SuperForm -> [QElem]
+qList numFrames = r initLoc initFactor initVector
   where initLoc = (0,0)
         initFactor = (1,1)
-        r :: Location -> Factor -> SuperForm -> [QElem]
-        r pl pf (Node scs) = foldr (\a -> (++) (r pl pf a)) [] scs
-        r pl pf (Leaf (Trans l sc)) = r (pl + (l * pf)) pf sc
-        r pl pf (Leaf (Scale f sc)) = r pl (pf * f) sc
-        r pl pf (Leaf (Elem e)) = [(pl, pf, e)]
+        initVector = (0,0)
+        nf = numFrames
+
+        r :: Location -> Factor -> Vector -> SuperForm -> [QElem]
+        r pl pf pv (Node scs) = foldr (\a -> (++) (r pl pf pv a)) [] scs
+        r pl pf pv (Leaf (Trans l sc)) = r (pl + (l * pf)) pf pv sc
+        r pl pf pv (Leaf (Scale f sc)) = r pl (pf * f) pv sc
+        r pl pf pv (Leaf (Travel v sc)) = 
+          r pl pf (pv + calcFrame nf (v * pf)) sc
+        r pl pf pv (Leaf (Elem e)) = [(pl, pf, pv, e)]
+        
+calcFrame nf v = v / fromIntegral nf
 
 type Draw = (Location, Primitive)
 
-draws :: SuperForm -> [Draw]
-draws = fmap (\(l,f,p) -> (l, scalePrim f p)) . prims
+draws :: Int -> SuperForm -> [[Draw]]
+draws nf = L.transpose . fmap (mult nf) . fmap scalePrim' . prims nf
 
-prims :: SuperForm -> [(Location, Factor, Primitive)]
-prims = f . qList
+mult :: Int -> (Location, Vector, Primitive) -> [Draw]
+mult nf (l,v,p) = foldr (\n -> (:) (l + (fromIntegral n, fromIntegral n) * v, p)) [] [1..nf]
+
+scalePrim' :: (Location, Factor, Vector, Primitive)
+           -> (Location, Vector, Primitive)
+scalePrim' (l,f,v,p) = (l, v, scalePrim f p)
+
+prims :: Int ->  SuperForm -> [(Location, Factor, Vector, Primitive)]
+prims nf = f . qList nf
   where f = foldr (\e as -> 
                      case e of
-                       (l,f,(Prim p)) -> (l,f,p) : as
+                       (l,f,v,(Prim p)) -> (l,f,v,p) : as
                        _ -> as) []
 
 actions :: SuperForm -> [QualAction]
-actions = concat . f . qList
+actions = concat . f . qList 1
   where f = foldr (\e as -> 
                      case e of
-                       (l,f,(Trigger b acs)) -> 
+                       (l,f,v,(Trigger b acs)) -> 
                          q l (f * b) acs : as
                        _ -> as) []
         q l b = fmap (\a -> (l,b,a))
@@ -74,12 +90,12 @@ actions = concat . f . qList
 bounds sc = 
   let bs = foldr (\e as -> 
                  case e of
-                   (l,f,(Bounds b)) -> 
+                   (l,f,v,(Bounds b)) -> 
                      (l, f * b) : as
                    _ -> as) []
-      xl = fmap (fst . fst) (bs (qList sc))
-      yl = fmap (snd . fst) (bs (qList sc))
-      bbs = fmap (\(l,b) -> l + b) (bs (qList sc))
+      xl = fmap (fst . fst) (bs (qList 1 sc))
+      yl = fmap (snd . fst) (bs (qList 1 sc))
+      bbs = fmap (\(l,b) -> l + b) (bs (qList 1 sc))
       xs = fmap fst bbs
       ys = fmap snd bbs
   in ( (minimum xl, minimum yl)

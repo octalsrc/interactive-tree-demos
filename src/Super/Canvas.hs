@@ -4,6 +4,7 @@ module Super.Canvas ( circle
                     , text
                     , rekt
                     , blank
+                    , isBlank
                     , combine
                     , emptyForm
                     , TravelGroup
@@ -42,25 +43,16 @@ data SuperCanvas = SC Context (Handler [QualAction])
 
 type TravelGroup = [(Vector, SuperForm)]
 
-travel :: Int -> TravelGroup -> [SuperForm]
-travel _ [] = [] 
-travel i as = 
-  let num = fromIntegral i
-      vnum = (num,num)
-      steps = [0 .. (i - 1)]
-      dist i d = d * (fromIntegral i 
-                     ,fromIntegral i) / vnum
-      leaf i (d,sf) = Leaf (Trans (dist i d) sf)
-  in fmap (\i -> Node (fmap (leaf i) as)) steps
-
-animate :: SuperCanvas -> Int -> [SuperForm] -> IO ()
-animate (SC cx newAc) i sfs = 
-  newAc [] >> animateToCanvas cx i (fmap draws sfs)
+travel :: Vector -> SuperForm -> SuperForm
+travel v = Leaf . Travel v
 
 write :: SuperCanvas -> SuperForm -> IO ()
-write (SC cx newAc) sf = 
+write c sf = animate c 1 0 sf
+
+animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
+animate (SC cx newAc) numFrames delay sf = 
   do newAc (actions sf)
-     writeToCanvas cx (draws sf)
+     writeToCanvas cx delay (draws numFrames sf)
 
 startCanvas :: String -> IO (SuperCanvas)
 startCanvas name = 
@@ -95,6 +87,8 @@ checkB (x,y) ((a,b),(w,h),_) = x >= a
                                && y <= (b + h) 
 
 emptyForm = Node []
+isBlank (Node []) = True
+isBlank _ = False
 
 fit :: Location -> BoundingBox -> SuperForm -> SuperForm
 fit l (w,h) s = let ((sx,sy),(sw,sh)) = bounds s 

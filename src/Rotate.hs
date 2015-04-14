@@ -18,8 +18,8 @@ treeAreaSize = (800, 195)
 main = startCanvas "thecanvas" >>= treestuff
 
 type ColorTree = BiTree (Bool, Color)
-type GameState = (ColorTree, (TravelGroup, ColorTree))
-type OutputSet = ([SuperForm], SuperForm)
+type GameState = (ColorTree, (SuperForm, ColorTree))
+type OutputSet = (SuperForm, SuperForm)
 
 treestuff sc = 
   do t <- newAddHandler
@@ -48,7 +48,7 @@ treestuff sc =
                                (snd res))
      actuate network
      changeValue "tellseed" (show rando)
-     (snd t) (ref, ([], nxt))
+     (snd t) (ref, (emptyForm, nxt))
      startTimer 1000000 (snd tm)
      putStrLn "Started?"
      return ()
@@ -71,7 +71,7 @@ mkNet sc ref t button field seedH timeH resetH fire reset =
          bRef = stepper ref (fmap fst eTrees)
          eTreeForms = fmap (format fire) eTrees 
          eForms = eTreeForms
-         bTrees = stepper (EmptyTree, ([], EmptyTree)) eTrees
+         bTrees = stepper (EmptyTree, (emptyForm, EmptyTree)) eTrees
      timerC <- changes ((,) <$> bTime <*> bTrees)
      reactimate' (fmap (evalState sc) <$> timerC)
      reactimate (fmap (display sc) eForms)
@@ -95,7 +95,10 @@ addGameOver sf = combine [ text (500,300)
                          , sf ]
 
 display :: SuperCanvas -> OutputSet -> IO ()
-display sc (as,s) = animate sc (75 * 1000) as >> write sc s
+display sc (as,s) = do if isBlank as
+                          then return ()
+                          else animate sc 5 (75 * 1000) as 
+                       write sc s
 
 timeUpd t = if t <= 0
                then t
@@ -108,7 +111,7 @@ newtrees res t (n,r) = do g <- newStdGen
                                            else r
                               (ref,nxt) = randomColorTrees n rando
                           changeValue "tellseed" (show rando)
-                          t (ref,([],nxt))
+                          t (ref,(emptyForm,nxt))
 
 tryread n s = case readMaybe s of
                 Just i -> i
@@ -117,7 +120,7 @@ tryread n s = case readMaybe s of
 format :: Handler GameState -> GameState -> OutputSet
 format fire (ref, (ani, nxt)) = 
   let pRef = fit (50,20) treeAreaSize (prepSTree ref)
-      pAni = fmap (fit (50,300) treeAreaSize) (travel 4 ani)
+      pAni = fit (50,300) treeAreaSize ani
       pNxt = fit (50,300) 
                  treeAreaSize
                  (prepTree (\b -> fire (ref,b)) nxt)
@@ -129,7 +132,7 @@ format fire (ref, (ani, nxt)) =
                                   "You Win!"
                            , can             ]
                     else can
-      animates = fmap (\a -> combine [a,pRef]) pAni
+      animates = combine [ pAni, pRef ]
   in (animates, nextshow)
 
 randomColorTrees :: Int -> Int -> (ColorTree, ColorTree)

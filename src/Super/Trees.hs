@@ -144,13 +144,13 @@ upheap (BiNode ll (intn) rr, (R l v c)) = (BiNode ll v rr, (R l intn c))
 upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
 
 
-prepTree :: Handler ( [(Vector, SuperForm)] 
+prepTree :: Handler ( SuperForm 
                     , BiTree (Bool, Color)  ) 
          -> BiTree (Bool, Color) 
          -> SuperForm
 prepTree f tree = trav f (top tree)
 
-trav :: Handler ( [(Vector, SuperForm)]
+trav :: Handler ( SuperForm
                 , BiTree (Bool, Color)  ) 
      -> QualTree (Bool, Color)
      -> SuperForm
@@ -178,13 +178,13 @@ mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
 mkInvis t = t
 
 rotatos :: QualTree (Bool, Color) 
-        -> ( [(Vector, SuperForm)]
+        -> ( SuperForm
            , BiTree (Bool, Color)  )
-rotatos (t, Top) = ([], t)
-rotatos qt = ( [ rTopTree qt
-               , rBottomTree qt
-               , rUpTree qt
-               , rDownTree qt ]
+rotatos (t, Top) = (prepSTree t, t)
+rotatos qt = ( combine [ rTopTree qt
+                       , rBottomTree qt
+                       , rUpTree qt
+                       , rDownTree qt   ]
              , (fst . qtUpMost . rotate) qt )
 
 qtCull qt = case qt of
@@ -192,28 +192,24 @@ qtCull qt = case qt of
               (_, R _ _ _) -> qtLeft qt
 
 rUpTree qt = let rqt = rotate qt
-             in ( findLoc rqt - findLoc qt
-                , translate (findLoc qt) 
-                            (prepRTree 
-                               ((qtUp . mkInvis . qtCull) qt)) )
+                 loc = findLoc qt
+                 vect = findLoc rqt - loc
+                 tree = prepRTree ((qtUp . mkInvis . qtCull) qt)
+             in (travel vect . translate loc) tree
 
 rDownTree qt = let rqt = rotate qt
+                   loc = findLoc (qtUp qt) 
                    desc = case qt of
                             (_, L _ _ _) -> qtRight
                             (_, R _ _ _) -> qtLeft
-               in ( findLoc (desc rqt) - findLoc (qtUp qt)
-                  , translate 
-                      (findLoc (qtUp qt)) 
-                      (prepRTree ((qtUp . mkInvis) qt)) )
+                   vect = findLoc (desc rqt) - loc
+                   tree = prepRTree ((qtUp . mkInvis) qt)
+               in (travel vect . translate loc) tree
 
-rTopTree qt = ( (0,0)
-              , prepSTree 
-                  ((fst . qtUpMost . mkInvis . qtUp) qt) )
+rTopTree qt = prepSTree ((fst . qtUpMost . mkInvis . qtUp) qt)
 
-rBottomTree qt = ( (0,0)
-                 , translate 
-                     (findLoc (qtCull qt))
-                     (prepRTree (qtCull qt)) )
+rBottomTree qt = let loc = findLoc (qtCull qt)
+                 in translate loc (prepRTree (qtCull qt))
 
 findLoc :: QualTree a -> Location
 findLoc tree = (tx (findX tree), ty (depthOf tree - 1))
