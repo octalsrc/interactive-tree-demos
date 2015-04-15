@@ -57,7 +57,7 @@ qList numFrames = r initLoc initFactor initVector
           r pl pf (pv + calcFrame nf (v * pf)) sc
         r pl pf pv (Leaf (Elem e)) = [(pl, pf, pv, e)]
         
-calcFrame nf v = v / fromIntegral nf
+calcFrame nf v = v / (fromIntegral nf, fromIntegral nf)
 
 type Draw = (Location, Primitive)
 

@@ -71,7 +71,11 @@ writeToCanvas :: Context -> Int -> [[Draw]] -> IO ()
 writeToCanvas c delay prims = 
   sequence_ (fmap (writeStep c delay) prims)
 
-writeStep c d ps = clearcan c >> threadDelay d >> sequence_ (fmap (writePrim c) ps)
+writeStep c d ps = do if d == 0
+                         then return ()
+                         else threadDelay d 
+                      clearcan c
+                      sequence_ (fmap (writePrim c) ps)
 
 writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 
