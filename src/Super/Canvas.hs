@@ -21,7 +21,6 @@ module Super.Canvas ( circle
                     , idFactor
                     , idLocation
                     , idVector
-                    , nextColor
                     , animate
                     , readValue
                     , changeValue

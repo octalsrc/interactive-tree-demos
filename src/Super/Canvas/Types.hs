@@ -16,11 +16,7 @@ module Super.Canvas.Types ( Primitive (..)
                           , idVector
                           , BoundingBox (..)
                           , Color (..) 
-                          , nextColor
-                          , prims
-                          , scalePrim
                           , Draw (..)
-                          , actio
                           , getIO 
                           , QualAction (..) 
                           , Action (..) ) where
@@ -50,7 +46,8 @@ qList numFrames = r initLoc initFactor initVector
         nf = numFrames
 
         r :: Location -> Factor -> Vector -> SuperForm -> [QElem]
-        r pl pf pv (Node scs) = foldr (\a -> (++) (r pl pf pv a)) [] scs
+        r pl pf pv (Node scs) = 
+          foldr (\a -> (++) (r pl pf pv a)) [] scs
         r pl pf pv (Leaf (Trans l sc)) = r (pl + (l * pf)) pf pv sc
         r pl pf pv (Leaf (Scale f sc)) = r pl (pf * f) pv sc
         r pl pf pv (Leaf (Travel v sc)) = 
@@ -65,7 +62,12 @@ draws :: Int -> SuperForm -> [[Draw]]
 draws nf = L.transpose . fmap (mult nf) . fmap scalePrim' . prims nf
 
 mult :: Int -> (Location, Vector, Primitive) -> [Draw]
-mult nf (l,v,p) = foldr (\n -> (:) (l + (fromIntegral n, fromIntegral n) * v, p)) [] [1..nf]
+mult nf qp = foldr (\n -> (:) (frameShift qp n)) [] [1..nf]
+
+frameShift (l,v,p) frame = (l + toVector frame * v, p)
+
+toVector :: Int -> Vector
+toVector n = (fromIntegral n, fromIntegral n)
 
 scalePrim' :: (Location, Factor, Vector, Primitive)
            -> (Location, Vector, Primitive)
@@ -112,9 +114,6 @@ instance Random Color where
   randomR (a,b) g = case randomR ( fromEnum a
                                  , fromEnum b) g of
                       (r,g') -> (toEnum r, g')
-
-nextColor White = Red
-nextColor c = succ c
 
 -- Be careful! this is not really a complete instance!
 instance Num (Double, Double) where
@@ -163,4 +162,4 @@ actio (OnClick io) = io
 
 type QualAction = (Location, BoundingBox, Action)
 
-getIO (_,_,ac) = actio ac
+getIO (_,_,(OnClick io)) = io
