@@ -29,7 +29,9 @@ module Super.Canvas ( circle
                     , attachField
                     , Color (..)
                     , SuperCanvas
+                    , getConfig
                     , SuperForm
+                    , Config
                     , startCanvas ) where
 
 import Control.Event.Handler (Handler)
@@ -37,10 +39,17 @@ import Reactive.Banana
 import Reactive.Banana.Frameworks
 import Data.Queue
 
+import qualified Data.Map as M
+
 import Super.Canvas.Types
 import Super.Canvas.JS
 
-data SuperCanvas = SC Context (Handler [QualAction]) CState
+data SuperCanvas = SC { scContext :: Context
+                      , scHandler :: (Handler [QualAction]) 
+                      , scCState  :: CState
+                      , getConfig :: Config                 }
+
+type Config = M.Map String String
 
 type TravelGroup = [(Vector, SuperForm)]
 
@@ -51,20 +60,21 @@ write :: SuperCanvas -> SuperForm -> IO ()
 write c sf = animate c 1 0 sf
 
 animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
-animate (SC cx newAc t) numFrames delay sf = 
+animate (SC cx newAc t _) numFrames delay sf = 
   do newAc (actions sf)
      writeToCanvas t cx delay (draws numFrames sf)
 
-startCanvas :: String -> IO (SuperCanvas)
-startCanvas name = 
+startCanvas :: String -> Config -> IO (SuperCanvas)
+startCanvas name defConf = 
   do can <- getCanvas name
      cH <- newAddHandler
      aH <- newAddHandler
      t <- initCState
+     config <- doConfig name defConf
      attachClickHandler name (snd cH)
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network
-     return (SC can (snd aH) t)
+     return (SC can (snd aH) t config)
 
 stopCanvas :: SuperCanvas -> IO ()
 stopCanvas = undefined

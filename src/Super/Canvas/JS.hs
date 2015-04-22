@@ -12,12 +12,14 @@ module Super.Canvas.JS ( getCanvas
                        , startTimer
                        , now
                        , initCState
+                       , doConfig
                        , CState
                        , Context ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
 import System.Random (newStdGen)
+import qualified Data.Map as M
 
 import GHCJS.Foreign
 import GHCJS.Types
@@ -72,6 +74,14 @@ getMousePos ev = do x <- ffiGetMX ev
                     return (fromIntegral x, fromIntegral y)
 
 clearcan = clearRect 0 0 900 500
+
+doConfig :: String -> M.Map String String -> IO (M.Map String String)
+doConfig n m = 
+  foldM (\acc k -> do canvas <- selp n
+                      v <- unpack <$> getAttr (pack k) canvas
+                      return $ M.insert k v acc) m (M.keys m)
+
+
 
 data CState = CState { writeQ :: TChan (IO ())
                      , delayQ :: TChan Double

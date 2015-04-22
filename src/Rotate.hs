@@ -3,6 +3,7 @@ import Reactive.Banana.Frameworks
 
 import Text.Read (readMaybe)
 import System.Random
+import qualified Data.Map as M
 
 import Super.Canvas
 import Super.Trees
@@ -15,7 +16,11 @@ timeAmount = 60 :: Int
 
 treeAreaSize = (800, 195)
 
-main = startCanvas "thecanvas" >>= treestuff
+defConfig = M.fromList [ ("defaultTreeSize", "16")
+                       , ("useStopwatch", "True")  ]
+
+
+main = startCanvas "thecanvas" defConfig >>= treestuff
 
 type ColorTree = BiTree (Bool, Color)
 type GameState = (ColorTree, (SuperForm, ColorTree))

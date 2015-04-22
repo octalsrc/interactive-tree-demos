@@ -3,11 +3,12 @@ import Reactive.Banana.Frameworks
 
 import Text.Read (readMaybe)
 import System.Random
+import qualified Data.Map as M
 
 import Super.Canvas
 import Super.Trees
 
-main = startCanvas "thecanvas" >>= treestuff
+main = startCanvas "thecanvas" M.empty >>= treestuff
 
 type HeapTree = BiTree (Int, Bool)
 
