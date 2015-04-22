@@ -22,7 +22,7 @@ executable animate-test
                        Super.Canvas.Types,
                        Super.Canvas.JS
   other-extensions:    CPP, ForeignFunctionInterface, JavaScriptFFI
-  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, queue,
+  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, queue, stm,
                        reactive-banana,
                        random,
                        ghcjs-jquery,
@@ -39,7 +39,7 @@ executable rotate-demo
                        Super.Canvas.Types,
                        Super.Canvas.JS
   other-extensions:    CPP, ForeignFunctionInterface, JavaScriptFFI
-  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, queue,
+  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, queue, stm,
                        reactive-banana,
                        random,
                        ghcjs-jquery,
@@ -55,6 +55,6 @@ executable heap-demo
                        Super.Canvas.Types,
                        Super.Canvas.JS
   other-extensions:    CPP, ForeignFunctionInterface, JavaScriptFFI
-  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, reactive-banana, random, ghcjs-jquery, ghcjs-canvas, ghcjs-base, queue
+  build-depends:       base >=4.7 && <4.8, data-default >=0.5 && <0.6, text >=1.1 && <1.3, reactive-banana, random, ghcjs-jquery, ghcjs-canvas, ghcjs-base, queue, stm
   hs-source-dirs:      src
   default-language:    Haskell2010

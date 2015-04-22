@@ -97,7 +97,7 @@ addGameOver sf = combine [ text (500,300)
 display :: SuperCanvas -> OutputSet -> IO ()
 display sc (as,s) = do if isBlank as
                           then return ()
-                          else animate sc 5 (75 * 1000) as 
+                          else animate sc 5 (42) as 
                        write sc s
 
 timeUpd t = if t <= 0

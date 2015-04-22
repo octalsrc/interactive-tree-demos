@@ -40,7 +40,7 @@ import Data.Queue
 import Super.Canvas.Types
 import Super.Canvas.JS
 
-data SuperCanvas = SC Context (Handler [QualAction]) (TChan (IO ()))
+data SuperCanvas = SC Context (Handler [QualAction]) CState
 
 type TravelGroup = [(Vector, SuperForm)]
 
@@ -60,7 +60,7 @@ startCanvas name =
   do can <- getCanvas name
      cH <- newAddHandler
      aH <- newAddHandler
-     t <- writeSpinner
+     t <- initCState
      attachClickHandler name (snd cH)
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network

@@ -10,12 +10,13 @@ module Super.Canvas.JS ( getCanvas
                        , attachClickHandler
                        , changeValue
                        , startTimer
-                       , writeSpinner
+                       , now
+                       , initCState
+                       , CState
                        , Context ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
-import Data.Queue
 import System.Random (newStdGen)
 
 import GHCJS.Foreign
@@ -23,7 +24,10 @@ import GHCJS.Types
 import JavaScript.Canvas
 import JavaScript.JQuery hiding (animate)
 
+import Data.Queue
+import Control.Concurrent.STM 
 import Control.Concurrent
+import Control.Applicative
 import Control.Monad
 
 import Super.Canvas.Types
@@ -69,24 +73,45 @@ getMousePos ev = do x <- ffiGetMX ev
 
 clearcan = clearRect 0 0 900 500
 
-writeToCanvas :: TChan (IO ()) -> Context -> Int -> [[Draw]] -> IO ()
+data CState = CState { writeQ :: TChan (IO ())
+                     , delayQ :: TChan Double
+                     , nextTime :: TVar Double }
+
+writeToCanvas :: CState -> Context -> Int -> [[Draw]] -> IO ()
 writeToCanvas t c delay prims = 
   sequence_ (fmap (writeStep t c delay) prims)
 
 writeStep t c d ps = 
-  enqueue t (clearcan c >> sequence_ (fmap (writePrim c) ps))
+  atomically (do enqueue (writeQ t) (clearcan c >> sequence_ (fmap (writePrim c) ps))
+                 enqueue (delayQ t) (fromIntegral d))
 
-writeSpinner :: IO (TChan (IO ()))
-writeSpinner = do tc <- (newFifo :: IO (TChan (IO ())))
-                  s <- syncCallback NeverRetain False (execNext tc)
-                  animate_JS s
-                  return tc
+initCState :: IO CState
+initCState = do wQ <- (newFifo :: IO (TChan (IO ())))
+                dQ <- (newFifo :: IO (TChan Double))
+                nT <- newTVarIO 0
+                let cState = CState wQ dQ nT
+                s <- syncCallback NeverRetain 
+                                  False 
+                                  (execNext cState)
+                browserPageRun s
+                return cState
 
-execNext :: TChan (IO ()) -> IO ()
-execNext tc = do mio <- dequeue tc
-                 case mio of
-                   Just io -> io
-                   _ -> return ()
+execNext :: CState -> IO ()
+execNext (CState wQ dQ nT) = 
+  do time <- now
+     mio <- atomically 
+              (do nextTime <- readTVar nT
+                  if time >= nextTime
+                     then do mt <- (dequeue :: TChan Double -> STM (Maybe Double)) dQ 
+                             mw <- (dequeue :: TChan (IO ()) -> STM (Maybe (IO ()))) wQ
+                             case (mw,mt) of
+                               (Just w,Just t) -> do writeTVar nT (time + t)
+                                                     return (Just w)
+                               _ -> return (Nothing)
+                     else return (Nothing))
+     case mio of
+       Just io -> io
+       _ -> return ()
 
 writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 
@@ -168,4 +193,7 @@ foreign import javascript safe "$r = $1.clientY - document.getElementById(\"thec
    ffiGetMY :: JavaScript.JQuery.Event -> IO Int
 
 foreign import javascript unsafe "var req = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame; var f = function() { $1(); req(f); }; req(f);"
-   animate_JS :: JSFun (IO ()) -> IO ()
+   browserPageRun :: JSFun (IO ()) -> IO ()
+
+foreign import javascript safe "Date.now()"
+   now :: IO Double
