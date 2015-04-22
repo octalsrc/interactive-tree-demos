@@ -4,6 +4,10 @@ import Reactive.Banana.Frameworks
 import Text.Read (readMaybe)
 import System.Random
 import qualified Data.Map as M
+import qualified Data.Char as C
+import qualified Data.List as L
+import Numeric (showHex,readHex)
+import Debug.Trace
 
 import Super.Canvas
 import Super.Trees
@@ -16,17 +20,25 @@ timeAmount = 60 :: Int
 
 treeAreaSize = (800, 195)
 
-defConfig = M.fromList [ ("defaultTreeSize", "16")
-                       , ("useStopwatch", "True")  ]
+defConfig = M.fromList [ ("default-tree-size", "16")
+                       , ("use-stopwatch", "True")  ]
 
+data Config = Config { defaultTreeSize :: Int
+                     , useStopwatch :: Bool }
 
-main = startCanvas "thecanvas" defConfig >>= treestuff
+prep = (,) 
+       <$> startCanvas "thecanvas"
+       <*> (Config
+            <$> option "default-tree-size" 16
+            <*> option "use-stopwatch" True)
+
+main = prep >>= treestuff
 
 type ColorTree = BiTree (Bool, Color)
 type GameState = (ColorTree, (SuperForm, ColorTree))
 type OutputSet = (SuperForm, SuperForm)
 
-treestuff sc = 
+treestuff (sc,conf) = 
   do t <- newAddHandler
      b <- newAddHandler
      attachButton "gen" (snd b)
@@ -39,9 +51,9 @@ treestuff sc =
      g <- newStdGen
      let (rando,g') = random g
          (ref,nxt) = randomColorTrees 
-                       defaultNodeCount 
-                       rando
-     network <- compile (mkNet sc
+                       (defaultTreeSize conf) 
+                       (abs rando)
+     network <- compile (mkNet (sc,conf)
                                ref 
                                (fst t)
                                (fst b)
@@ -52,13 +64,14 @@ treestuff sc =
                                (snd t)
                                (snd res))
      actuate network
-     changeValue "tellseed" (show rando)
+     
+     changeValue "tellseed" ((show.abs) rando)
      (snd t) (ref, (emptyForm, nxt))
      startTimer 1000000 (snd tm)
      putStrLn "Started?"
      return ()
 
-mkNet sc ref t button field seedH timeH resetH fire reset = 
+mkNet (sc,conf) ref t button field seedH timeH resetH fire reset = 
   do eTrees <- fromAddHandler t
      eButton <- fromAddHandler button
      eField <- fromAddHandler field
@@ -68,8 +81,8 @@ mkNet sc ref t button field seedH timeH resetH fire reset =
      let bTime = accumB timeAmount 
                         ((timeUpd <$ eTimer)
                               `union` (timeRes <$ eResets))
-         eNums = fmap (tryread defaultNodeCount) eField
-         bNum = stepper defaultNodeCount eNums
+         eNums = fmap (tryread (defaultTreeSize conf)) eField
+         bNum = stepper (defaultTreeSize conf)  eNums
          eSeedNums = fmap (tryread 0) eSeed
          bSeedNums = stepper 0 eSeedNums
          bGenInfo = (,) <$> bNum <*> bSeedNums
@@ -112,7 +125,7 @@ timeUpd t = if t <= 0
 newtrees res t (n,r) = do g <- newStdGen
                           res ()
                           let (rando) = if r == 0
-                                           then fst (random g) 
+                                           then (abs.fst) (random g) 
                                            else r
                               (ref,nxt) = randomColorTrees n rando
                           changeValue "tellseed" (show rando)
@@ -148,3 +161,4 @@ randomColorTrees i r =
                           (randomRs (Red,Yellow) g1))
       tree = randomTree nodes 
   in (tree g2, tree g3)
+

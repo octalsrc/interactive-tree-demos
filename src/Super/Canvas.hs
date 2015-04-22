@@ -23,21 +23,22 @@ module Super.Canvas ( circle
                     , idVector
                     , nextColor
                     , animate
+                    , readValue
                     , changeValue
                     , attachButton
                     , startTimer
                     , attachField
                     , Color (..)
                     , SuperCanvas
-                    , getConfig
+                    , option
                     , SuperForm
-                    , Config
                     , startCanvas ) where
 
 import Control.Event.Handler (Handler)
 import Reactive.Banana
 import Reactive.Banana.Frameworks
 import Data.Queue
+import Text.Read (readMaybe)
 
 import qualified Data.Map as M
 
@@ -46,10 +47,14 @@ import Super.Canvas.JS
 
 data SuperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
-                      , scCState  :: CState
-                      , getConfig :: Config                 }
+                      , scCState  :: CState                 }
 
-type Config = M.Map String String
+option :: Read a => String -> a -> IO a
+option n d = tryread d <$> readValue ("sc-option-" ++ n)
+
+tryread n s = case readMaybe s of
+                Just i -> i
+                _ -> n
 
 type TravelGroup = [(Vector, SuperForm)]
 
@@ -60,21 +65,20 @@ write :: SuperCanvas -> SuperForm -> IO ()
 write c sf = animate c 1 0 sf
 
 animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
-animate (SC cx newAc t _) numFrames delay sf = 
+animate (SC cx newAc t) numFrames delay sf = 
   do newAc (actions sf)
      writeToCanvas t cx delay (draws numFrames sf)
 
-startCanvas :: String -> Config -> IO (SuperCanvas)
-startCanvas name defConf = 
+startCanvas :: String -> IO (SuperCanvas)
+startCanvas name = 
   do can <- getCanvas name
      cH <- newAddHandler
      aH <- newAddHandler
-     t <- initCState
-     config <- doConfig name defConf
+     t <- initCState 
      attachClickHandler name (snd cH)
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network
-     return (SC can (snd aH) t config)
+     return (SC can (snd aH) t)
 
 stopCanvas :: SuperCanvas -> IO ()
 stopCanvas = undefined

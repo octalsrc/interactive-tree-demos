@@ -9,6 +9,7 @@ module Super.Canvas.JS ( getCanvas
                        , writeToCanvas
                        , attachClickHandler
                        , changeValue
+                       , readValue
                        , startTimer
                        , now
                        , initCState
@@ -47,6 +48,10 @@ changeValue name val = do x <- selp ("#" ++ name)
                           setText (pack val) x
                           return ()
 
+readValue name = do x <- selp ("#" ++ name)
+                    t <- unpack <$> getText x
+                    return t
+
 getCanvas name = selp ("#" ++ name)
                  >>= indexArray 0 . castRef 
                  >>= getContext
@@ -78,7 +83,9 @@ clearcan = clearRect 0 0 900 500
 doConfig :: String -> M.Map String String -> IO (M.Map String String)
 doConfig n m = 
   foldM (\acc k -> do canvas <- selp n
-                      v <- unpack <$> getAttr (pack k) canvas
+                      putStrLn ("Trying to read " ++ k)
+                      v <- unpack <$> getAttr (pack ("data-sc-" ++ k)) canvas
+                      putStrLn ("Got " ++ v)
                       return $ M.insert k v acc) m (M.keys m)
 
 

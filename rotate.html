@@ -16,22 +16,9 @@
 
     <p style = "font-size: 1.3em;"> Time remaining: <span id="timer"
     style="color: red;"></span> seconds</p>
-    
+
     <canvas id="thecanvas" height="500" width="900"
 	    style="background: lightgray;"
-
-       <!-- CONFIGURATION SECTION
-            =====================
-
-            Each key should be the configuration
-            option's name with "data-sc-" 
-            prepended to it.                                -->
-
-	    data-sc-defaultTreeSize="16" <!-- Int -->
-            data-sc-useStopwatch="True" <!-- "True" or "False" -->
-       
-       <!-- (END OF CONFIGURATION SECTION) -->
-
 	    ></canvas>
 
     <div style="height: 4;"></div>
@@ -41,7 +28,7 @@
     <div class="space" style="height: 0.6em;"></div>
     
     <span> Number of Nodes: </span>
-    <input id="numnodes" type="text" name="a" value="16"
+    <input id="numnodes" type="text" name="a"
 	   style="width: 2.5em; text-align: center;" />
     
     <div class="space" style="height: 0.6em;"></div>
@@ -49,6 +36,19 @@
     <span> Seed (Optional): </span>
     <input id ="seed" type="text" name="b" value="" />
 
+    <div id="sc-config" style="visibility: hidden;">
+
+       <!-- CONFIGURATION SECTION
+            =====================
+
+            Each ID should be the configuration
+            option's name with "sc-option-" 
+            prepended to it.                                -->
+
+      <div id="sc-option-default-tree-size">16</div> <!-- Integer -->
+      <div id="sc-option-use-stopwatch">True</div> <!-- "True" or "False" -->
+    </div>
+    
     
   </body>
 </html>

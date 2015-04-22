@@ -1,8 +1,7 @@
 import Super.Canvas
 import Control.Concurrent (threadDelay)
-import qualified Data.Map as M
 
-main = startCanvas "thecanvas" M.empty >>= test
+main = startCanvas "thecanvas" >>= test
 
 test sc = threadDelay 1000000 >> animate sc 20 (42 * 1000) (s as)
 
