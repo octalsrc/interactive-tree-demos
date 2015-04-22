@@ -57,7 +57,7 @@ treestuff (sc,conf) =
      actuate network
      
      changeValue "tellseed" ((show.abs) rando)
-     (snd t) (ref, (emptyForm, nxt))
+     (snd t) (ref, (blank, nxt))
      startTimer 1000000 (snd tm)
      putStrLn "Started?"
      return ()
@@ -80,7 +80,7 @@ mkNet (sc,conf) ref t button field seedH timeH resetH fire reset =
          bRef = stepper ref (fmap fst eTrees)
          eTreeForms = fmap (format fire) eTrees 
          eForms = eTreeForms
-         bTrees = stepper (EmptyTree, (emptyForm, EmptyTree)) eTrees
+         bTrees = stepper (EmptyTree, (blank, EmptyTree)) eTrees
      timerC <- changes ((,) <$> bTime <*> bTrees)
      reactimate' (fmap (evalState sc) <$> timerC)
      reactimate (fmap (display sc) eForms)
@@ -120,7 +120,7 @@ newtrees res t (n,r) = do g <- newStdGen
                                            else r
                               (ref,nxt) = randomColorTrees n rando
                           changeValue "tellseed" (show rando)
-                          t (ref,(emptyForm,nxt))
+                          t (ref,(blank,nxt))
 
 tryread n s = case readMaybe s of
                 Just i -> i

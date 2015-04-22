@@ -6,9 +6,8 @@ module Super.Canvas ( circle
                     , blank
                     , isBlank
                     , combine
-                    , emptyForm
-                    , TravelGroup
                     , Location
+                    , Factor
                     , Vector
                     , BoundingBox 
                     , scale
@@ -55,8 +54,6 @@ tryread n s = case readMaybe s of
                 Just i -> i
                 _ -> n
 
-type TravelGroup = [(Vector, SuperForm)]
-
 travel :: Vector -> SuperForm -> SuperForm
 travel v = Leaf . Travel v
 
@@ -79,21 +76,15 @@ startCanvas name =
      actuate network
      return (SC can (snd aH) t)
 
-stopCanvas :: SuperCanvas -> IO ()
-stopCanvas = undefined
-
 mkNet c a = 
   do eClicks <- fromAddHandler c
      eQActions <- fromAddHandler a
      let arm = (\qa cs -> filter (checkB cs) qa)
          eActive = fmap arm eQActions
          bLive = stepper (const []) eActive
-         eTriggered = fmap (fmap getIO) 
-                           (bLive <@> eClicks)
+         eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
+     
      reactimate (fmap sequence_ eTriggered)
-     reactimate (fmap (\e -> putStrLn "triggerd!" >> print (length e)) eTriggered)
-     reactimate (fmap (\as -> putStrLn "new actions!" >> sequence_ (fmap (\(l,b,_) -> print (l,b)) as)) eQActions)
-     reactimate (fmap (\e -> putStrLn "click!" >> print e) eClicks)
 
 checkB :: Location -> QualAction -> Bool
 checkB (x,y) ((a,b),(w,h),_) = x >= a
@@ -101,7 +92,9 @@ checkB (x,y) ((a,b),(w,h),_) = x >= a
                                && y >= b
                                && y <= (b + h) 
 
-emptyForm = Node []
+blank :: SuperForm
+blank = Node []
+
 isBlank (Node []) = True
 isBlank _ = False
 
@@ -125,8 +118,7 @@ line loc dest thick =
       maxx = max (fst loc) (fst (loc + dest))
       maxy = max (snd loc) (snd (loc + dest))
       box = (maxx, maxy) - (minx, miny)
-  in primElev loc (minx, miny) box (Line dest thick) 
-
+  in primElev loc (minx, miny) box (Line dest thick)
 
 text :: Location -> BoundingBox -> String -> SuperForm
 text loc box str = 
@@ -142,7 +134,7 @@ rekt loc box col =
 combine :: [SuperForm] -> SuperForm
 combine = Node . fmap pullUp
 
--- purpose here is to cull unnecessary node-nesting
+-- the purpose here is to cull unnecessary node-nesting
 pullUp :: SuperForm -> SuperForm
 pullUp (Node ((Node n):[])) = Node n
 pullUp n = n
@@ -154,7 +146,7 @@ translate :: Vector -> SuperForm -> SuperForm
 translate v = Leaf . Trans v 
 
 onClick :: [IO ()] -> Location -> BoundingBox -> SuperForm
-onClick ios l b = 
+onClick ios l b =
   Leaf (Trans l (Leaf (Elem (Trigger b (fmap OnClick ios)))))
 
 addOnClick :: [IO ()] -> SuperForm -> SuperForm
@@ -162,9 +154,6 @@ addOnClick ios sc =
   let b = bounds sc
       a = onClick ios (fst b) (snd b)
   in combine [sc, a]
-
-blank :: SuperForm
-blank = Node []
 
 primElev :: Location -> Location -> BoundingBox -> Primitive 
          -> SuperForm
