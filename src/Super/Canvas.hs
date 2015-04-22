@@ -35,11 +35,12 @@ module Super.Canvas ( circle
 import Control.Event.Handler (Handler)
 import Reactive.Banana
 import Reactive.Banana.Frameworks
+import Data.Queue
 
 import Super.Canvas.Types
 import Super.Canvas.JS
 
-data SuperCanvas = SC Context (Handler [QualAction])
+data SuperCanvas = SC Context (Handler [QualAction]) (TChan (IO ()))
 
 type TravelGroup = [(Vector, SuperForm)]
 
@@ -50,19 +51,20 @@ write :: SuperCanvas -> SuperForm -> IO ()
 write c sf = animate c 1 0 sf
 
 animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
-animate (SC cx newAc) numFrames delay sf = 
+animate (SC cx newAc t) numFrames delay sf = 
   do newAc (actions sf)
-     writeToCanvas cx delay (draws numFrames sf)
+     writeToCanvas t cx delay (draws numFrames sf)
 
 startCanvas :: String -> IO (SuperCanvas)
 startCanvas name = 
   do can <- getCanvas name
      cH <- newAddHandler
      aH <- newAddHandler
+     t <- writeSpinner
      attachClickHandler name (snd cH)
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network
-     return (SC can (snd aH))
+     return (SC can (snd aH) t)
 
 stopCanvas :: SuperCanvas -> IO ()
 stopCanvas = undefined

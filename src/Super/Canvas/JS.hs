@@ -10,10 +10,12 @@ module Super.Canvas.JS ( getCanvas
                        , attachClickHandler
                        , changeValue
                        , startTimer
+                       , writeSpinner
                        , Context ) where
 
 import Data.Default (def)
 import Data.Text (pack, unpack)
+import Data.Queue
 import System.Random (newStdGen)
 
 import GHCJS.Foreign
@@ -67,15 +69,24 @@ getMousePos ev = do x <- ffiGetMX ev
 
 clearcan = clearRect 0 0 900 500
 
-writeToCanvas :: Context -> Int -> [[Draw]] -> IO ()
-writeToCanvas c delay prims = 
-  sequence_ (fmap (writeStep c delay) prims)
+writeToCanvas :: TChan (IO ()) -> Context -> Int -> [[Draw]] -> IO ()
+writeToCanvas t c delay prims = 
+  sequence_ (fmap (writeStep t c delay) prims)
 
-writeStep c d ps = do if d == 0
-                         then return ()
-                         else threadDelay d 
-                      clearcan c
-                      sequence_ (fmap (writePrim c) ps)
+writeStep t c d ps = 
+  enqueue t (clearcan c >> sequence_ (fmap (writePrim c) ps))
+
+writeSpinner :: IO (TChan (IO ()))
+writeSpinner = do tc <- (newFifo :: IO (TChan (IO ())))
+                  s <- syncCallback NeverRetain False (execNext tc)
+                  animate_JS s
+                  return tc
+
+execNext :: TChan (IO ()) -> IO ()
+execNext tc = do mio <- dequeue tc
+                 case mio of
+                   Just io -> io
+                   _ -> return ()
 
 writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 
@@ -155,3 +166,6 @@ foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thec
 
 foreign import javascript safe "$r = $1.clientY - document.getElementById(\"thecanvas\").getBoundingClientRect().top;"
    ffiGetMY :: JavaScript.JQuery.Event -> IO Int
+
+foreign import javascript unsafe "var req = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame; var f = function() { $1(); req(f); }; req(f);"
+   animate_JS :: JSFun (IO ()) -> IO ()
