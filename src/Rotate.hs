@@ -6,22 +6,13 @@ import System.Random
 import qualified Data.Map as M
 import qualified Data.Char as C
 import qualified Data.List as L
-import Numeric (showHex,readHex)
-import Debug.Trace
 
 import Super.Canvas
 import Super.Trees
 
-{- Config -}
-
-defaultNodeCount = 16
-
 timeAmount = 60 :: Int
 
 treeAreaSize = (800, 195)
-
-defConfig = M.fromList [ ("default-tree-size", "16")
-                       , ("use-stopwatch", "True")  ]
 
 data Config = Config { defaultTreeSize :: Int
                      , useStopwatch :: Bool }

@@ -13,7 +13,6 @@ module Super.Canvas.JS ( getCanvas
                        , startTimer
                        , now
                        , initCState
-                       , doConfig
                        , CState
                        , Context ) where
 
@@ -35,38 +34,34 @@ import Control.Monad
 
 import Super.Canvas.Types
 
-canvasName = "thecanvas"
-
-selp = select . pack
-
-sCanvas = selp ("#" ++ canvasName)
+selp = select . pack . ("#" ++)
 
 startTimer time out = 
   forkIO (forever (threadDelay time >> out ()))
 
-changeValue name val = do x <- selp ("#" ++ name)
+changeValue name val = do x <- selp name
                           setText (pack val) x
                           return ()
 
-readValue name = do x <- selp ("#" ++ name)
+readValue name = do x <- selp name
                     t <- unpack <$> getText x
                     return t
 
-getCanvas name = selp ("#" ++ name)
+getCanvas name = selp name
                  >>= indexArray 0 . castRef 
                  >>= getContext
 
-attachClickHandler name c = do can <- selp ("#" ++ name)
+attachClickHandler name c = do can <- selp name
                                let h ev = c =<< getMousePos ev
                                click h def can 
                                return ()
 
-attachButton name b = do but <- selp ("#" ++ name)
+attachButton name b = do but <- selp name
                          let h ev = b =<< newStdGen
                          click h def but
                          return ()
                          
-attachField name f = do field <- selp ("#" ++ name)
+attachField name f = do field <- selp name
                         let d = do val <- getVal field
                                    return (unpack val)
                             h ev = f =<< d
@@ -79,16 +74,6 @@ getMousePos ev = do x <- ffiGetMX ev
                     return (fromIntegral x, fromIntegral y)
 
 clearcan = clearRect 0 0 900 500
-
-doConfig :: String -> M.Map String String -> IO (M.Map String String)
-doConfig n m = 
-  foldM (\acc k -> do canvas <- selp n
-                      putStrLn ("Trying to read " ++ k)
-                      v <- unpack <$> getAttr (pack ("data-sc-" ++ k)) canvas
-                      putStrLn ("Got " ++ v)
-                      return $ M.insert k v acc) m (M.keys m)
-
-
 
 data CState = CState { writeQ :: TChan (IO ())
                      , delayQ :: TChan Double
