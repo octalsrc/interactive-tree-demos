@@ -21,8 +21,12 @@ module Super.Canvas ( circle
                     , idLocation
                     , idVector
                     , animate
-                    , readValue
-                    , changeValue
+                    , readElem
+                    , safeReadElem
+                    , changeInput
+                    , readInput
+                    , safeReadInput
+                    , changeElem
                     , attachButton
                     , startTimer
                     , attachField
@@ -47,8 +51,14 @@ data SuperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
                       , scCState  :: CState                 }
 
+safeReadElem :: Read a => String -> a -> IO a
+safeReadElem n d = tryread d <$> readElem n
+
+safeReadInput :: Read a => String -> a -> IO a
+safeReadInput n d = tryread d <$> readInput n
+
 option :: Read a => String -> a -> IO a
-option n d = tryread d <$> readValue ("sc-option-" ++ n)
+option n d = safeReadElem ("sc-option-" ++ n) d
 
 tryread n s = case readMaybe s of
                 Just i -> i

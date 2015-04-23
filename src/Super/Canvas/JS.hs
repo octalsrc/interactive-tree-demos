@@ -8,8 +8,10 @@ module Super.Canvas.JS ( getCanvas
                        , clearcan
                        , writeToCanvas
                        , attachClickHandler
-                       , changeValue
-                       , readValue
+                       , changeElem
+                       , readElem
+                       , changeInput
+                       , readInput
                        , startTimer
                        , now
                        , initCState
@@ -27,6 +29,7 @@ import JavaScript.Canvas
 import JavaScript.JQuery hiding (animate)
 
 import Data.Queue
+import Control.Event.Handler (Handler)
 import Control.Concurrent.STM 
 import Control.Concurrent
 import Control.Applicative
@@ -39,12 +42,20 @@ selp = select . pack . ("#" ++)
 startTimer time out = 
   forkIO (forever (threadDelay time >> out ()))
 
-changeValue name val = do x <- selp name
-                          setText (pack val) x
+changeElem name val = do x <- selp name
+                         setText (pack val) x
+                         return ()
+
+readElem name = do x <- selp name
+                   t <- unpack <$> getText x
+                   return t
+
+changeInput name val = do x <- selp name
+                          setVal (pack val) x
                           return ()
 
-readValue name = do x <- selp name
-                    t <- unpack <$> getText x
+readInput name = do x <- selp name
+                    t <- unpack <$> getVal x
                     return t
 
 getCanvas name = selp name
@@ -56,11 +67,12 @@ attachClickHandler name c = do can <- selp name
                                click h def can 
                                return ()
 
-attachButton name b = do but <- selp name
-                         let h ev = b =<< newStdGen
-                         click h def but
-                         return ()
-                         
+attachButton :: String -> IO (a) -> Handler a -> IO ()
+attachButton name io b = do but <- selp name
+                            let h ev = io >>= b
+                            click h def but
+                            return ()
+
 attachField name f = do field <- selp name
                         let d = do val <- getVal field
                                    return (unpack val)

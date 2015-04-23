@@ -16,7 +16,7 @@ treestuff sc =
   do t <- newAddHandler
      g <- newStdGen
      b <- newAddHandler
-     attachButton "newnode" (snd b)
+     attachButton "newnode" newStdGen (snd b)
      let thetrees :: HeapTree
          thetrees = randomHeapTree 8 g
      network <- compile (mkNet sc
