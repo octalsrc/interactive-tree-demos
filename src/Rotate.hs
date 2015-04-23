@@ -120,18 +120,26 @@ render (conf,sc,h) gs =
 
 format :: Env -> GameState -> [SuperForm]
 format (conf,sc,h) gs =
-  let (fitRef, fitWork, fitMoves) = layouts (conf,sc,h)
+  let (fitRef, fitWork, fitMoves, fitWin) = layouts (conf,sc,h)
       ref = gsRefTree gs
+      work = gsWorkTree gs
+      win = translate (100,25)
+                      (text (0,0)
+                            (250,200)
+                            ("Complete!"))
       mc = translate (100,25) 
                      (text (0,0) 
                            (200,100) 
                            ("Moves: " ++ show (gsMoveCount gs)))
   in [ combine [ fitRef (prepSTree ref)
-               , fitWork (gsForm gs)
-               , fitMoves mc ]
-     , combine [ fitRef (prepSTree ref)
-               , fitWork (prepTree h (gsWorkTree gs))
-               , fitMoves mc ] ]
+               , fitMoves mc
+               , fitWork (gsForm gs) ]
+     , combine ([ fitRef (prepSTree ref)
+                , fitMoves mc ]
+                ++ (if ref == work -- win-state!
+                       then [fitWork (prepSTree work)
+                            ,fitWin win]
+                       else [fitWork (prepTree h work)])) ]
 
 layouts (conf,sc,h) = 
   let padding = 30 :: Double
@@ -147,7 +155,9 @@ layouts (conf,sc,h) =
       fitRef = fit (toTup padding) treeBox
       fitWork = fit (padding, padding * 2 + treeAreaY) treeBox
       fitMoves = fit (padding * 2 + treeAreaX, padding) infoBox
-  in (fitRef, fitWork, fitMoves)
+      fitWin = fit (padding * 2 + treeAreaX
+                   ,padding * 2 + infoY) infoBox
+  in (fitRef, fitWork, fitMoves, fitWin)
 
 randomColorTrees :: Int -> Int -> (ColorTree, ColorTree)
 randomColorTrees i r = 
