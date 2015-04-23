@@ -12,13 +12,20 @@ module Super.Trees ( BiTree (..)
                    , qtUpMost 
                    , rotate
                    , prepTree
-                   , prepSTree ) where
+                   , prepSTree
+                   , TreeR (..)
+                   , ColorTree (..) ) where
 
 import Control.Event.Handler (Handler)
 import System.Random
 import qualified Data.List as L
 
 import Super.Canvas
+
+data TreeR = TreeR { trTree :: ColorTree
+                   , trForm :: SuperForm }
+
+type ColorTree = BiTree (Bool, Color)
 
 confSize = 10
 distX = (1.5 * confSize)
@@ -144,14 +151,12 @@ upheap (BiNode ll (intn) rr, (R l v c)) = (BiNode ll v rr, (R l intn c))
 upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
 
 
-prepTree :: Handler ( SuperForm 
-                    , BiTree (Bool, Color)  ) 
+prepTree :: Handler TreeR 
          -> BiTree (Bool, Color) 
          -> SuperForm
 prepTree f tree = trav f (top tree)
 
-trav :: Handler ( SuperForm
-                , BiTree (Bool, Color)  ) 
+trav :: Handler TreeR 
      -> QualTree (Bool, Color)
      -> SuperForm
 trav fire (BiNode l (True,col) r, c) = 
@@ -178,14 +183,13 @@ mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
 mkInvis t = t
 
 rotatos :: QualTree (Bool, Color) 
-        -> ( SuperForm
-           , BiTree (Bool, Color)  )
-rotatos (t, Top) = (prepSTree t, t)
-rotatos qt = ( combine [ rTopTree qt
-                       , rBottomTree qt
-                       , rUpTree qt
-                       , rDownTree qt   ]
-             , (fst . qtUpMost . rotate) qt )
+        -> TreeR
+rotatos (t, Top) = TreeR t (prepSTree t)
+rotatos qt = TreeR ((fst . qtUpMost . rotate) qt)
+                   (combine [ rTopTree qt
+                            , rBottomTree qt
+                            , rUpTree qt
+                            , rDownTree qt   ])
 
 qtCull qt = case qt of
               (_, L _ _ _) -> qtRight qt
