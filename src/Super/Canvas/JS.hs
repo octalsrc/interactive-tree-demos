@@ -6,6 +6,7 @@ module Super.Canvas.JS ( getCanvas
                        , attachButton
                        , attachField
                        , clearcan
+                       , insertCanvas
                        , writeToCanvas
                        , attachClickHandler
                        , changeElem
@@ -38,6 +39,8 @@ import Super.Canvas.Types
 
 selp = select . pack . ("#" ++)
 
+selp' = select . pack
+
 changeElem name val = do x <- selp name
                          setText (pack val) x
                          return ()
@@ -54,14 +57,37 @@ readInput name = do x <- selp name
                     t <- unpack <$> getVal x
                     return t
 
-getCanvas name = selp name
-                 >>= indexArray 0 . castRef 
-                 >>= getContext
+canvasName name = "sc-" ++ name ++ "-canvas"
+divName name = "sc-" ++ name ++ "-div"
 
-attachClickHandler name c = do can <- selp name
-                               let h ev = c =<< getMousePos ev
-                               click h def can 
-                               return ()
+insertCanvas :: String -> BoundingBox -> String -> IO Context
+insertCanvas name (x,y) style = 
+  do let cantext = ("<canvas id=\""
+                    ++ canvasName name
+                    ++ "\" height=\""
+                    ++ show y
+                    ++ "\" width=\""
+                    ++ show x
+                    ++ "\" style=\""
+                    ++ style
+                    ++ "\"></canvas>")
+     c <- selp' cantext
+     putStrLn cantext
+     d <- selp (divName name)
+     putStrLn (divName name)
+     appendJQuery c d
+     getContext' c
+
+getCanvas name = selp (canvasName name)
+                 >>= getContext'
+
+getContext' jq = (indexArray 0 . castRef) jq >>= getContext
+
+attachClickHandler name c = 
+  do can <- selp (canvasName name)
+     let h ev = c =<< getMousePos (canvasName name) ev
+     click h def can 
+     return ()
 
 attachButton :: String -> IO (a) -> Handler a -> IO ()
 attachButton name io b = do but <- selp name
@@ -76,23 +102,33 @@ attachField name f = do field <- selp name
                         keyup h def field
                         return ()
 
-getMousePos :: Event -> IO (Double, Double)
-getMousePos ev = do x <- ffiGetMX ev
-                    y <- ffiGetMY ev
-                    return (fromIntegral x, fromIntegral y)
+getMousePos :: String -> Event -> IO (Double, Double)
+getMousePos name ev = 
+  do x <- ffiGetMX (toJSString name)
+                   ev
+     y <- ffiGetMY (toJSString name)
+                   ev
+     return (fromIntegral x, fromIntegral y)
 
-clearcan = clearRect 0 0 900 500
+clearcan (x,y) = clearRect 0 0 x y
 
 data CState = CState { writeQ :: TChan (IO ())
                      , delayQ :: TChan Double
                      , nextTime :: TVar Double }
 
-writeToCanvas :: CState -> Context -> Int -> [[Draw]] -> IO ()
-writeToCanvas t c delay prims = 
-  sequence_ (fmap (writeStep t c delay) prims)
+writeToCanvas :: BoundingBox 
+              -> CState 
+              -> Context 
+              -> Int 
+              -> [[Draw]] 
+              -> IO ()
+writeToCanvas size t c delay prims = 
+  sequence_ (fmap (writeStep size t c delay) prims)
 
-writeStep t c d ps = 
-  atomically (do enqueue (writeQ t) (clearcan c >> sequence_ (fmap (writePrim c) ps))
+writeStep size t c d ps = 
+  atomically (do enqueue (writeQ t) 
+                         (clearcan size c 
+                          >> sequence_ (fmap (writePrim c) ps))
                  enqueue (delayQ t) (fromIntegral d))
 
 initCState :: IO CState
@@ -196,11 +232,11 @@ try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
                                  >> return (panicSize,f)
                     else print (show (floor f)) >> return (x,f)
 
-foreign import javascript safe "$r = $1.clientX - document.getElementById(\"thecanvas\").getBoundingClientRect().left;"
-   ffiGetMX :: JavaScript.JQuery.Event -> IO Int
+foreign import javascript safe "$r = $2.clientX - document.getElementById($1).getBoundingClientRect().left;"
+   ffiGetMX :: JSString -> JavaScript.JQuery.Event -> IO Int
 
-foreign import javascript safe "$r = $1.clientY - document.getElementById(\"thecanvas\").getBoundingClientRect().top;"
-   ffiGetMY :: JavaScript.JQuery.Event -> IO Int
+foreign import javascript safe "$r = $2.clientY - document.getElementById($1).getBoundingClientRect().top;"
+   ffiGetMY :: JSString -> JavaScript.JQuery.Event -> IO Int
 
 foreign import javascript unsafe "var req = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame; var f = function() { $1(); req(f); }; req(f);"
    browserPageRun :: JSFun (IO ()) -> IO ()

@@ -48,7 +48,8 @@ import Super.Canvas.JS
 
 data SuperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
-                      , scCState  :: CState                 }
+                      , scCState  :: CState
+                      , scSize    :: BoundingBox}
 
 safeReadElem :: Read a => String -> a -> IO a
 safeReadElem n d = tryread d <$> readElem n
@@ -56,8 +57,8 @@ safeReadElem n d = tryread d <$> readElem n
 safeReadInput :: Read a => String -> a -> IO a
 safeReadInput n d = tryread d <$> readInput n
 
-option :: Read a => String -> a -> IO a
-option n d = safeReadElem ("sc-option-" ++ n) d
+option :: Read a => String -> String -> a -> IO a
+option n o d = safeReadElem ("sc-" ++ n ++ "-option-" ++ o) d
 
 tryread n s = case readMaybe s of
                 Just i -> i
@@ -70,20 +71,27 @@ write :: SuperCanvas -> SuperForm -> IO ()
 write c sf = animate c 1 0 sf
 
 animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
-animate (SC cx newAc t) numFrames delay sf = 
-  do newAc (actions sf)
-     writeToCanvas t cx delay (draws numFrames sf)
+animate sc numFrames delay sf = 
+  do (scHandler sc) (actions sf)
+     writeToCanvas (scSize sc)
+                   (scCState sc) 
+                   (scContext sc) 
+                   delay 
+                   (draws numFrames sf)
 
-startCanvas :: String -> IO (SuperCanvas)
-startCanvas name = 
-  do can <- getCanvas name
+startCanvas :: String 
+            -> BoundingBox 
+            -> String 
+            -> IO (SuperCanvas)
+startCanvas name size style = 
+  do can <- insertCanvas name size style
      cH <- newAddHandler
      aH <- newAddHandler
      t <- initCState 
      attachClickHandler name (snd cH)
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network
-     return (SC can (snd aH) t)
+     return (SC can (snd aH) t size)
 
 mkNet c a = 
   do eClicks <- fromAddHandler c

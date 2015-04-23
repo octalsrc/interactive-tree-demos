@@ -1,7 +1,10 @@
 import Super.Canvas
 import Control.Concurrent (threadDelay)
 
-main = startCanvas "thecanvas" >>= test
+main = startCanvas "main" 
+                   (900,500) 
+                   "background: lightgray;" 
+       >>= test
 
 test sc = threadDelay 1000000 >> animate sc 20 (42 * 1000) (s as)
 

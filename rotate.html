@@ -17,9 +17,7 @@
     <p style = "font-size: 1.3em;"> Time remaining: <span id="timer"
     style="color: red;"></span> seconds</p>
 
-    <canvas id="thecanvas" height="500" width="900"
-	    style="background: lightgray;"
-	    ></canvas>
+    <div id="sc-main-div"></div>
 
     <div style="height: 4;"></div>
 
@@ -34,20 +32,43 @@
     <div class="space" style="height: 0.6em;"></div>
     
     <span> Seed (Optional): </span>
-    <input id ="seed" type="text" name="b" value="" />
+    <input id="seed" type="text" name="b" value="" />
 
-    <div id="sc-config" style="visibility: hidden;">
+    <div id="sc-main-config" style="visibility: hidden;">
 
-       <!-- CONFIGURATION SECTION
-            =====================
+      <!-- CONFIGURATION SECTION
+           =====================
 
-            Each ID should be the configuration
-            option's name with "sc-option-" 
-            prepended to it.                                -->
+           Each ID should be the configuration
+           option's name with "sc-main-option-" 
+           prepended to it. -->
 
-      <div id="sc-option-default-tree-size">16</div> <!-- Integer -->
-      <div id="sc-option-maximum-tree-size">99</div>
-      <div id="sc-option-use-stopwatch">True</div> <!-- "True" or "False" -->
+      <!-- Integer :: The number of nodes in a tree
+                      if not modified by the user -->
+      <div id="sc-main-option-default-tree-size"
+	   >16</div>
+
+      <!-- Integer :: Maximum number of nodes allowed -->
+      <div id="sc-main-option-maximum-tree-size"
+	   >99</div>
+
+      <!-- "True"|"False" :: Whether to show the stopwatch
+                             on-screen during the game -->
+      <div id="sc-main-option-use-stopwatch"
+	   >True</div>
+
+      <!-- Integer :: canvas width -->
+      <div id="sc-main-option-canvas-width"
+	   >900</div>
+
+      <!-- Integer :: canvas height -->
+      <div id="sc-main-option-canvas-height"
+	   >500</div>
+
+      <!-- CSS :: The style which will be applied to the
+                  canvas when it is added to the page -->
+      <div id="sc-main-option-canvas-style"
+	   >background: lightgray;</div>
     </div>
     
     

@@ -14,16 +14,28 @@ treeAreaSize = (800, 195)
 
 minNodes = 3 :: Int
 
-data Config = Config { defaultTreeSize :: Int
+data Config = Config { canvasWidth :: Double
+                     , canvasHeight :: Double
+                     , defaultTreeSize :: Int
                      , maximumTreeSize :: Int
-                     , useStopwatch :: Bool }
+                     , useStopwatch :: Bool
+                     , canvasStyle :: String  }
 
-prep = (,) 
-       <$> startCanvas "thecanvas"
-       <*> (Config
-            <$> option "default-tree-size" 16
-            <*> option "maximum-tree-size" 99
-            <*> option "use-stopwatch" True)
+prep :: IO (SuperCanvas, Config)
+prep = do let n = "main"
+              s = "background: lightgray;"
+          conf <- Config
+                  <$> option n "canvas-width" 900
+                  <*> option n "canvas-height" 500
+                  <*> option n "default-tree-size" 16
+                  <*> option n "maximum-tree-size" 99
+                  <*> option n "use-stopwatch" True
+                  <*> option n "canvas-style" s
+          sc <- startCanvas n 
+                            ( canvasWidth conf
+                            , canvasHeight conf )
+                            (canvasStyle conf)
+          return (sc, conf)
 
 main = prep >>= treestuff
 

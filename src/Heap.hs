@@ -8,7 +8,10 @@ import qualified Data.Map as M
 import Super.Canvas
 import Super.Trees
 
-main = startCanvas "thecanvas" >>= treestuff
+main = startCanvas "main" 
+                   (900,500) 
+                   "background: lightgray;" 
+       >>= treestuff
 
 type HeapTree = BiTree (Int, Bool)
 
