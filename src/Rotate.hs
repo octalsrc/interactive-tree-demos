@@ -19,7 +19,10 @@ data Config = Config { canvasWidth :: Double
                      , defaultTreeSize :: Int
                      , maximumTreeSize :: Int
                      , useStopwatch :: Bool
-                     , canvasStyle :: String  }
+                     , canvasStyle :: String
+                     , treeSizeInputID :: String
+                     , seedInputID :: String
+                     , newGameButtonID :: String}
 
 prep :: IO (SuperCanvas, Config)
 prep = do let n = "main"
@@ -31,6 +34,9 @@ prep = do let n = "main"
                   <*> option n "maximum-tree-size" 99
                   <*> option n "use-stopwatch" True
                   <*> option n "canvas-style" s
+                  <*> option n "tree-size-input-id" "numnodes"
+                  <*> option n "seed-input-id" "seed"
+                  <*> option n "new-game-button-id" "newgame"
           sc <- startCanvas n 
                             ( canvasWidth conf
                             , canvasHeight conf )
@@ -52,17 +58,17 @@ readNewGame conf =
                 <$> newStdGen
      let defNodes = defaultTreeSize conf
          maxNodes = maximumTreeSize conf
-     nn <- safeReadInput "numnodes" defNodes
-     seed <- safeReadInput "seed" defSeed
+     nn <- safeReadInput (treeSizeInputID conf) defNodes
+     seed <- safeReadInput (seedInputID conf) defSeed
      let numNodes = max minNodes (min maxNodes nn)
-     changeInput "numnodes" (show numNodes)
-     changeInput "seed" ("")
+     changeInput (treeSizeInputID conf) (show numNodes)
+     changeInput (seedInputID conf) ("")
      return (NewGame numNodes seed)
 
 treestuff (sc,conf) = 
   do t <- newAddHandler
      b <- newAddHandler
-     attachButton "newGame" 
+     attachButton (newGameButtonID conf)
                   (readNewGame conf)
                   (snd b)  
      g <- newStdGen
