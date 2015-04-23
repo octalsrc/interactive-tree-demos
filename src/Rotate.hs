@@ -10,8 +10,6 @@ import qualified Data.List as L
 import Super.Canvas
 import Super.Trees
 
-timeAmount = 60 :: Int
-
 treeAreaSize = (800, 195)
 
 minNodes = 3 :: Int
@@ -54,9 +52,7 @@ treestuff (sc,conf) =
      b <- newAddHandler
      attachButton "newGame" 
                   (readNewGame conf)
-                  (snd b)
-     tm <- newAddHandler
-     res <- newAddHandler
+                  (snd b)  
      g <- newStdGen
      let (rando,g') = random g
          (ref,nxt) = randomColorTrees 
@@ -66,51 +62,23 @@ treestuff (sc,conf) =
                                ref 
                                (fst t)
                                (fst b)
-                               (fst tm)
-                               (fst res)
-                               (snd t)
-                               (snd res))
+                               (snd t))
      actuate network
      
      changeElem "tellseed" ((show.abs) rando)
      (snd t) (ref, (blank, nxt))
-     startTimer 1000000 (snd tm)
      putStrLn "Started?"
      return ()
 
-mkNet (sc,conf) ref t newGames timeH resetH fire reset = 
+mkNet (sc,conf) ref t newGames fire = 
   do eTrees <- fromAddHandler t
-     eNewGames <- fromAddHandler newGames
-     eTimer <- fromAddHandler timeH
-     eResets <- fromAddHandler resetH
-     let bTime = accumB timeAmount 
-                        ((timeUpd <$ eTimer)
-                              `union` (timeRes <$ eResets))
-         bRef = stepper ref (fmap fst eTrees)
+     eNewGames <- fromAddHandler newGames 
+     let bRef = stepper ref (fmap fst eTrees)
          eTreeForms = fmap (format fire) eTrees 
          eForms = eTreeForms
-         bTrees = stepper (EmptyTree, (blank, EmptyTree)) eTrees
-     timerC <- changes ((,) <$> bTime <*> bTrees)
-     reactimate' (fmap (evalState sc) <$> timerC)
+         bTrees = stepper (EmptyTree, (blank, EmptyTree)) eTrees 
      reactimate (fmap (display sc) eForms)
-     reactimate (fmap (newtrees reset fire) eNewGames)
-
-timeRes _ = timeAmount
-
-evalState :: SuperCanvas -> (Int, GameState) -> IO ()
-evalState sc (t,g) = do changeElem "timer" (show t)
-                        if t <= 0
-                           then (write sc 
-                                 . addGameOver
-                                 . snd
-                                 . format (\_ -> return ())) g
-                           else return ()
-
-addGameOver :: SuperForm -> SuperForm
-addGameOver sf = combine [ text (500,300)
-                                (200,150)
-                                "Game Over"
-                         , sf ]
+     reactimate (fmap (newtrees fire) eNewGames)
 
 display :: SuperCanvas -> OutputSet -> IO ()
 display sc (as,s) = do if isBlank as
@@ -122,9 +90,8 @@ timeUpd t = if t <= 0
                then t
                else t - 1
 
-newtrees res t ng = 
+newtrees t ng = 
   do g <- newStdGen
-     res ()
      let rando = ngSeed ng
          (ref,nxt) = randomColorTrees 
                        (ngNumNodes ng)

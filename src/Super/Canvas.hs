@@ -28,7 +28,6 @@ module Super.Canvas ( circle
                     , safeReadInput
                     , changeElem
                     , attachButton
-                    , startTimer
                     , attachField
                     , Color (..)
                     , SuperCanvas

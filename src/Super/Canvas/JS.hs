@@ -12,7 +12,6 @@ module Super.Canvas.JS ( getCanvas
                        , readElem
                        , changeInput
                        , readInput
-                       , startTimer
                        , now
                        , initCState
                        , CState
@@ -38,9 +37,6 @@ import Control.Monad
 import Super.Canvas.Types
 
 selp = select . pack . ("#" ++)
-
-startTimer time out = 
-  forkIO (forever (threadDelay time >> out ()))
 
 changeElem name val = do x <- selp name
                          setText (pack val) x
