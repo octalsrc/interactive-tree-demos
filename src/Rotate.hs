@@ -48,8 +48,10 @@ main = prep >>= treestuff
 data NewGame = NewGame { ngNumNodes :: Int
                        , ngSeed :: Int     }
 
-readNewGame :: Config -> Handler TreeR -> IO (GameState -> GameState)     
-readNewGame conf h = 
+type Env = (Config, SuperCanvas, Handler TreeR)
+
+readNewGame :: Env -> IO (GameState -> GameState)     
+readNewGame (conf,sc,h) = 
   do defSeed <- (abs . fst . random) <$> newStdGen
      let defNodes = defaultTreeSize conf
          maxNodes = maximumTreeSize conf
@@ -58,74 +60,94 @@ readNewGame conf h =
      let numNodes = max minNodes (min maxNodes nn)
      changeInput (treeSizeInputID conf) (show numNodes)
      changeInput (seedInputID conf) ("")
-     return (newGameState conf h (NewGame numNodes seed))
+     return (newGameState (conf,sc,h) (NewGame numNodes seed))
 
 data GameState = GameState { gsRefTree :: ColorTree
                            , gsWorkTree :: ColorTree
-                           , gsForms :: [SuperForm]  }
+                           , gsForm :: SuperForm
+                           , gsMoveCount :: Int      }
 
 genTrees :: NewGame -> (ColorTree, ColorTree)
 genTrees ng = randomColorTrees (ngNumNodes ng) (ngSeed ng)
 
 emptyState :: GameState
-emptyState = GameState EmptyTree EmptyTree []
+emptyState = GameState EmptyTree EmptyTree blank 0
 
-newGameState :: Config -> Handler TreeR -> NewGame -> GameState -> GameState
-newGameState conf h ng _ = 
+newGameState :: Env -> NewGame -> GameState -> GameState
+newGameState (conf,sc,h) ng _ = 
   let (ref,work) = genTrees ng
-  in GameState ref work (format conf h (TreeR work blank) ref)
+  in GameState ref work blank 0
 
-initGame :: Config -> SuperCanvas -> Handler TreeR -> IO GameState
-initGame conf sc h = do state <- readNewGame conf h <*> pure emptyState
-                        render sc (gsForms state)
-                        return state
+initGame :: Env -> IO GameState
+initGame (conf,sc,h) = 
+  do state <- readNewGame (conf,sc,h) <*> pure emptyState
+     render (conf,sc,h) state
+     return state
 
 treestuff (sc,conf) = 
   do t <- newAddHandler -- for trees to return rotations
      b <- newAddHandler -- for button clicks that restart the game
+     let h = snd t
      attachButton (newGameButtonID conf) 
-                  (readNewGame conf (snd t)) 
-                  (snd b)  
-     iState <- initGame conf sc (snd t)
-     network <- compile (mkNet (sc,conf,iState) 
+                  (readNewGame (conf,sc,h)) 
+                  (snd b)
+     iState <- initGame (conf,sc,h)
+     network <- compile (mkNet (conf,sc,h)
+                               iState 
                                (fst t) 
-                               (fst b) 
-                               (snd t))
+                               (fst b))
      actuate network
      putStrLn "Started?"
 
-mkNet (sc,conf,iState) treeRs newGames fire = 
+mkNet (conf,sc,h) iState treeRs newGames = 
   do eRotations <- fromAddHandler treeRs 
      eNewGames <- fromAddHandler newGames 
-     let eTreeUps = fmap (treeUp conf fire) eRotations
+     let eTreeUps = fmap (treeUp (conf,sc,h)) eRotations
          bState = accumB iState (eNewGames `union` eTreeUps)
      stateChanges <- changes bState
-     reactimate' (fmap (render sc . gsForms) <$> stateChanges)
+     reactimate' (fmap (render (conf,sc,h)) <$> stateChanges)
 
 
-treeUp :: Config -> Handler TreeR -> TreeR -> GameState -> GameState
-treeUp conf fire tr (GameState ref work forms) = 
-  GameState ref (trTree tr) (format conf fire tr ref)
+treeUp :: Env -> TreeR -> GameState -> GameState
+treeUp (conf,sc,h) tr gs = GameState (gsRefTree gs) 
+                                     (trTree tr) 
+                                     (trForm tr) 
+                                     (gsMoveCount gs + 1) 
 
-render :: SuperCanvas -> [SuperForm] -> IO ()
-render sc = sequence_ . fmap (animate sc 5 42)
+render :: Env -> GameState -> IO ()
+render (conf,sc,h) gs = 
+  (sequence_ . fmap (animate sc 5 42)) (format (conf,sc,h) gs)
 
-format :: Config -> Handler TreeR -> TreeR -> ColorTree -> [SuperForm]
-format conf fire tr ref =
+format :: Env -> GameState -> [SuperForm]
+format (conf,sc,h) gs =
+  let (fitRef, fitWork, fitMoves) = layouts (conf,sc,h)
+      ref = gsRefTree gs
+      mc = translate (100,25) 
+                     (text (0,0) 
+                           (200,100) 
+                           ("Moves: " ++ show (gsMoveCount gs)))
+  in [ combine [ fitRef (prepSTree ref)
+               , fitWork (gsForm gs)
+               , fitMoves mc ]
+     , combine [ fitRef (prepSTree ref)
+               , fitWork (prepTree h (gsWorkTree gs))
+               , fitMoves mc ] ]
+
+layouts (conf,sc,h) = 
   let padding = 30 :: Double
       toTup x = (x,x)
       treeAreaX = canvasWidth conf * 2 / 3 - padding * 2
       treeAreaY = canvasHeight conf / 2 - padding * 2
       treeBox = (treeAreaX, treeAreaY)
-      sRef = fit (toTup padding) treeBox (prepSTree ref)
-      sWork = fit (padding, padding * 2 + treeAreaY) 
-                  treeBox
-                  (prepTree fire (trTree tr))
-      aWork = fit (padding, padding * 2 + treeAreaY)
-                  treeBox
-                  (trForm tr)
-  in [ combine [sRef, aWork]
-     , combine [sRef, sWork] ]
+      
+      infoX = canvasWidth conf * 1 / 3 - padding * 2
+      infoY = canvasHeight conf / 3 - padding * 2
+      infoBox = (infoX, infoY)
+
+      fitRef = fit (toTup padding) treeBox
+      fitWork = fit (padding, padding * 2 + treeAreaY) treeBox
+      fitMoves = fit (padding * 2 + treeAreaX, padding) infoBox
+  in (fitRef, fitWork, fitMoves)
 
 randomColorTrees :: Int -> Int -> (ColorTree, ColorTree)
 randomColorTrees i r = 
