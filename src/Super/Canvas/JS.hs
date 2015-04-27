@@ -229,9 +229,8 @@ try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
                  if x > d
                     then if x > 0
                             then try d (f - fontPrecision) s c 
-                            else print ("hit bottom..") 
-                                 >> return (panicSize,f)
-                    else print (show (floor f)) >> return (x,f)
+                            else return (panicSize,f)
+                    else return (x,f)
 
 foreign import javascript safe "$r = $2.clientX - document.getElementById($1).getBoundingClientRect().left;"
    ffiGetMX :: JSString -> JavaScript.JQuery.Event -> IO Int
