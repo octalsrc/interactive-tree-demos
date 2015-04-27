@@ -10,7 +10,8 @@ import Super.Trees
 
 main = startCanvas "main" 
                    (900,500) 
-                   "background: lightgray;" 
+                   "background: lightgray;"
+                   ["main"]
        >>= treestuff
 
 type HeapTree = BiTree (Int, Bool)
@@ -41,7 +42,7 @@ mkNet sc t b rs fire =
          eAllTrees = eTrees `union` (bAdd <@> eButton)
          eTreeForms = fmap (format4 fire) eAllTrees
          eForms = eTreeForms
-     reactimate (fmap (write sc) eForms)
+     reactimate (fmap (write sc "main") eForms)
 
 
 addNode' t g = addNode g t

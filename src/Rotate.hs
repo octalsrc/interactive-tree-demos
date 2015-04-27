@@ -41,6 +41,7 @@ prep = do let n = "main"
                             ( canvasWidth conf
                             , canvasHeight conf )
                             (canvasStyle conf)
+                            ["main"]
           return (sc, conf)
 
 main = prep >>= treestuff
@@ -97,7 +98,7 @@ treestuff (sc,conf) =
                                (fst t) 
                                (fst b))
      actuate network
-     putStrLn "Started?"
+     -- putStrLn "Started?"
 
 mkNet (conf,sc,h) iState treeRs newGames = 
   do eRotations <- fromAddHandler treeRs 
@@ -116,7 +117,7 @@ treeUp (conf,sc,h) tr gs = GameState (gsRefTree gs)
 
 render :: Env -> GameState -> IO ()
 render (conf,sc,h) gs = 
-  (sequence_ . fmap (animate sc 5 42)) (format (conf,sc,h) gs)
+  (sequence_ . fmap (animate sc "main" 5 42)) (format (conf,sc,h) gs)
 
 format :: Env -> GameState -> [SuperForm]
 format (conf,sc,h) gs =

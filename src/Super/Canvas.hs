@@ -45,11 +45,41 @@ import qualified Data.Map as M
 
 import Super.Canvas.Types
 import Super.Canvas.JS
+import Super.Canvas.Concurrent
 
 data SuperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
                       , scCState  :: CState
                       , scSize    :: BoundingBox}
+
+startCanvas :: String 
+            -> BoundingBox 
+            -> String
+            -> [String]
+            -> IO (SuperCanvas)
+startCanvas name size style chans = 
+  do can <- insertCanvas name size style
+  
+     cH <- newAddHandler
+     aH <- newAddHandler   
+     attachClickHandler name (snd cH)
+     network <- compile (mkNet (fst cH) (fst aH))
+     actuate network
+             
+     cstate <- newCState chans
+     let writer = writeToCanvas size can
+     startBrowserPageRun (stepCState cstate writer)
+
+     return (SC can (snd aH) cstate size)
+
+mkNet c a = 
+  do eClicks <- fromAddHandler c
+     eQActions <- fromAddHandler a
+     let arm = (\qa cs -> filter (checkB cs) qa)
+         eActive = fmap arm eQActions
+         bLive = stepper (const []) eActive
+         eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
+     reactimate (fmap sequence_ eTriggered)
 
 safeReadElem :: Read a => String -> a -> IO a
 safeReadElem n d = tryread d <$> readElem n
@@ -67,41 +97,13 @@ tryread n s = case readMaybe s of
 travel :: Vector -> SuperForm -> SuperForm
 travel v = Leaf . Travel v
 
-write :: SuperCanvas -> SuperForm -> IO ()
-write c sf = animate c 1 0 sf
+write :: SuperCanvas -> String -> SuperForm -> IO ()
+write sc chan sf = animate sc chan 1 0 sf
 
-animate :: SuperCanvas -> Int -> Int -> SuperForm -> IO ()
-animate sc numFrames delay sf = 
-  do (scHandler sc) (actions sf)
-     writeToCanvas (scSize sc)
-                   (scCState sc) 
-                   (scContext sc) 
-                   delay 
-                   (draws numFrames sf)
-
-startCanvas :: String 
-            -> BoundingBox 
-            -> String 
-            -> IO (SuperCanvas)
-startCanvas name size style = 
-  do can <- insertCanvas name size style
-     cH <- newAddHandler
-     aH <- newAddHandler
-     t <- initCState 
-     attachClickHandler name (snd cH)
-     network <- compile (mkNet (fst cH) (fst aH))
-     actuate network
-     return (SC can (snd aH) t size)
-
-mkNet c a = 
-  do eClicks <- fromAddHandler c
-     eQActions <- fromAddHandler a
-     let arm = (\qa cs -> filter (checkB cs) qa)
-         eActive = fmap arm eQActions
-         bLive = stepper (const []) eActive
-         eTriggered = fmap (fmap getIO) (bLive <@> eClicks)
-     
-     reactimate (fmap sequence_ eTriggered)
+animate :: SuperCanvas -> String -> Int -> Int -> SuperForm -> IO ()
+animate sc chan numFrames delay sf = 
+  (scHandler sc) (actions sf) 
+  >> enqueueDraws (scCState sc) chan delay (draws numFrames sf)
 
 checkB :: Location -> QualAction -> Bool
 checkB (x,y) ((a,b),(w,h),_) = x >= a

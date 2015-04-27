@@ -14,8 +14,7 @@ module Super.Canvas.JS ( getCanvas
                        , changeInput
                        , readInput
                        , now
-                       , initCState
-                       , CState
+                       , startBrowserPageRun
                        , Context ) where
 
 import Data.Default (def)
@@ -72,9 +71,9 @@ insertCanvas name (x,y) style =
                     ++ style
                     ++ "\"></canvas>")
      c <- selp' cantext
-     putStrLn cantext
+     -- putStrLn cantext
      d <- selp (divName name)
-     putStrLn (divName name)
+     -- putStrLn (divName name)
      appendJQuery c d
      getContext' c
 
@@ -116,14 +115,12 @@ data CState = CState { writeQ :: TChan (IO ())
                      , delayQ :: TChan Double
                      , nextTime :: TVar Double }
 
-writeToCanvas :: BoundingBox 
-              -> CState 
+writeToCanvas :: BoundingBox  
               -> Context 
-              -> Int 
-              -> [[Draw]] 
+              -> [Draw] 
               -> IO ()
-writeToCanvas size t c delay prims = 
-  sequence_ (fmap (writeStep size t c delay) prims)
+writeToCanvas size c prims = 
+  clearcan size c >> sequence_ (fmap (writePrim c) prims)
 
 writeStep size t c d ps = 
   atomically (do enqueue (writeQ t) 
@@ -131,33 +128,37 @@ writeStep size t c d ps =
                           >> sequence_ (fmap (writePrim c) ps))
                  enqueue (delayQ t) (fromIntegral d))
 
-initCState :: IO CState
-initCState = do wQ <- (newFifo :: IO (TChan (IO ())))
-                dQ <- (newFifo :: IO (TChan Double))
-                nT <- newTVarIO 0
-                let cState = CState wQ dQ nT
-                s <- syncCallback NeverRetain 
-                                  False 
-                                  (execNext cState)
-                browserPageRun s
-                return cState
+startBrowserPageRun :: IO () -> IO ()
+startBrowserPageRun action = 
+  syncCallback NeverRetain False action >>= browserPageRun
 
-execNext :: CState -> IO ()
-execNext (CState wQ dQ nT) = 
-  do time <- now
-     mio <- atomically 
-              (do nextTime <- readTVar nT
-                  if time >= nextTime
-                     then do mt <- (dequeue :: TChan Double -> STM (Maybe Double)) dQ 
-                             mw <- (dequeue :: TChan (IO ()) -> STM (Maybe (IO ()))) wQ
-                             case (mw,mt) of
-                               (Just w,Just t) -> do writeTVar nT (time + t)
-                                                     return (Just w)
-                               _ -> return (Nothing)
-                     else return (Nothing))
-     case mio of
-       Just io -> io
-       _ -> return ()
+-- initCState :: IO CState
+-- initCState = do wQ <- (newFifo :: IO (TChan (IO ())))
+--                 dQ <- (newFifo :: IO (TChan Double))
+--                 nT <- newTVarIO 0
+--                 let cState = CState wQ dQ nT
+--                 s <- syncCallback NeverRetain 
+--                                   False 
+--                                   (execNext cState)
+--                 browserPageRun s
+--                 return cState
+
+-- execNext :: CState -> IO ()
+-- execNext (CState wQ dQ nT) = 
+--   do time <- now
+--      mio <- atomically 
+--               (do nextTime <- readTVar nT
+--                   if time >= nextTime
+--                      then do mt <- (dequeue :: TChan Double -> STM (Maybe Double)) dQ 
+--                              mw <- (dequeue :: TChan (IO ()) -> STM (Maybe (IO ()))) wQ
+--                              case (mw,mt) of
+--                                (Just w,Just t) -> do writeTVar nT (time + t)
+--                                                      return (Just w)
+--                                _ -> return (Nothing)
+--                      else return (Nothing))
+--      case mio of
+--        Just io -> io
+--        _ -> return ()
 
 writePrim :: Context -> Draw -> IO ()
 writePrim c (l,p) = 
@@ -166,7 +167,7 @@ writePrim c (l,p) =
   in case prim of
        Circle r f col -> 
          do let (rc, gc, bc) = style col
-            putStrLn ("Drawing a circle...")
+            -- putStrLn ("Drawing a circle...")
             beginPath c 
             fillStyle rc gc bc 255 c
             strokeStyle 0 0 0 255 c
@@ -176,7 +177,7 @@ writePrim c (l,p) =
                else stroke c 
             return ()
        Line (xd,yd) w ->
-         do putStrLn ("Drawing a line...")
+         do -- putStrLn ("Drawing a line...")
             beginPath c
             moveTo x y c
             lineTo (x + xd) (y + yd) c
@@ -189,7 +190,7 @@ writePrim c (l,p) =
             drawTextCenter (x,y) w h s c 
        Rekt (w,h) col ->
          do let (rc, gc, bc) = style col
-            putStrLn ("Drawing a rekt...")
+            -- putStrLn ("Drawing a rekt...")
             fillStyle rc gc bc 255 c
             fillRect x y w h c
             return ()
