@@ -248,7 +248,7 @@ sketchHeapNode bl col ploc acs =
   let rcolor = if bl
                   then Yellow
                   else White
-      circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) rcolor
+      circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) True rcolor
       tex = text (idLocation) (confSize * 2, confSize * 1.2) (show col)
   in if bl
         then combine [ line idLocation ploc 2

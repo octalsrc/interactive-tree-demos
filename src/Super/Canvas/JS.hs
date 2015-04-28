@@ -188,14 +188,19 @@ writePrim c (l,p) =
        Text (w,h) s ->
          do fillStyle 0 0 0 255 c
             drawTextCenter (x,y) w h s c 
-       Rekt (w,h) col ->
+       Rekt (w,h) fill col ->
          do let (rc, gc, bc) = style col
             -- putStrLn ("Drawing a rekt...")
-            fillStyle rc gc bc 255 c
-            fillRect x y w h c
+            if fill
+               then fillStyle rc gc bc 255 c
+                    >> fillRect x y w h c 
+               else strokeStyle rc gc bc 255 c
+                    >> strokeRect x y w h c
             return ()
 
 style White = (255,255,255)
+style Grey = (140,140,140)
+style Black = (0,0,0)
 style Red = (255, 0, 0)
 style Green = (0, 190, 0)
 style Blue = (0, 0, 230)

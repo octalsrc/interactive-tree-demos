@@ -103,7 +103,7 @@ bounds sc =
   in ( (minimum xl, minimum yl)
      , (maximum xs - minimum xl, maximum ys - minimum yl))
 
-data Color = Red | Green | Blue | Yellow | White
+data Color = Red | Green | Blue | Yellow | White | Grey | Black
              deriving (Show, Enum, Bounded, Eq)
 
 instance Random Color where
@@ -147,14 +147,14 @@ data Primitive = -- radius, fill, Color
                  -- (width,height), text
                | Text BoundingBox String
                  -- (width,height), fill, Color
-               | Rekt BoundingBox Color
+               | Rekt BoundingBox Bool Color
                deriving (Show, Eq)
 
 scalePrim :: Factor -> Primitive -> Primitive
 scalePrim f (Circle r b c) = Circle (r * (fst f)) b c
 scalePrim f (Line v t) = Line (v * f) t
 scalePrim f (Text b s) = Text (b * f) s
-scalePrim f (Rekt b c) = Rekt (b * f) c
+scalePrim f (Rekt b fill c) = Rekt (b * f) fill c
 
 data Action = OnClick (IO ()) -- maybe later.. | MouseOver (IO ())
 

@@ -171,22 +171,19 @@ format (conf,sc,h) gs =
         layouts (conf,sc,h)
       ref = gsRefTree gs
       work = gsWorkTree gs
-      win = translate (100,25)
-                      (text (0,0)
-                            (300,30)
-                            ("Complete!"))
-      mc = translate (100,25) 
-                     (text (0,0) 
-                           (300,30) 
-                           ("Moves: " ++ show (gsMoveCount gs)))
+      win = infoTab "-- Status --" (if complete gs
+                                       then "Match"
+                                       else "\x2260")
+      mc = infoTab "-- Moves --" (show (gsMoveCount gs))
   in [ combine [ fitRef (prepSTree ref)
                , fitMoves mc
+               , fitWin win
                , fitWork (gsForm gs) ]
      , combine ([ fitRef (prepSTree ref)
-                , fitMoves mc ]
+                , fitMoves mc
+                , fitWin win ]
                 ++ (if complete gs -- win-state!
-                       then [fitWork (prepSTree work)
-                            ,fitWin win]
+                       then [fitWork (prepSTree work)]
                        else [fitWork (prepTree h work)])) ]
 
 rwatch :: Env -> Int -> IO ()
@@ -194,19 +191,17 @@ rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)
 
 rformat :: Env -> Int -> SuperForm
 rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
-                        in fitTime (translate (100,25)
-                                              (text (0,0)
-                                                    (300,30)
-                                                    (timestring t)))
-                                                    
+                        in fitTime (infoTab "-- Time --" (timestring t))
+
 infoTab :: String -> String -> SuperForm
-infoTab name info = combine [translate (150,10)
+infoTab name info = combine [rekt (0,0) (200,90) False Black
+                            ,translate (100,15)
                                        (text (0,0)
-                                             (300,10)
+                                             (200,20)
                                              name)
-                            ,translate (150,25)
+                            ,translate (100,60)
                                        (text (0,0)
-                                             (300, 30)
+                                             (200, 36)
                                              info)]
 
 layouts (conf,sc,h) = 

@@ -163,9 +163,9 @@ text loc box str =
            box 
            (Text box str)
 
-rekt :: Location -> BoundingBox -> Color -> SuperForm
-rekt loc box col = 
-  primElev loc loc box (Rekt box col)
+rekt :: Location -> BoundingBox -> Bool -> Color -> SuperForm
+rekt loc box fill col = 
+  primElev loc loc box (Rekt box fill col)
 
 combine :: [SuperForm] -> SuperForm
 combine = Node . fmap pullUp
