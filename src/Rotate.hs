@@ -225,14 +225,13 @@ layouts (conf,sc,h) =
       infoY = canvasHeight conf / 3 - padding * 2
       infoBox = (infoX, infoY)
 
-      fitRef f = let xv = (fst (snd (bounds f))) / 2
-                 in fit (toTup padding) 
-                        treeBox 
-                        (translate (treeAreaX / 2 - xv,0) f)
-      fitWork f = let xv = (fst (snd (bounds f))) / 2
-                  in fit (padding, padding * 2 + treeAreaY) 
-                         treeBox 
-                         (translate (treeAreaX / 2 - xv,0) f)
+      fitRef f = let ff = fit (toTup padding) treeBox f
+                     xv = (fst (snd (bounds ff))) / 2
+                 in translate (treeAreaX / 2 - xv,0) ff
+      fitWork f = let ff = fit (padding, padding * 2 + treeAreaY) 
+                               treeBox f
+                      xv = (fst (snd (bounds ff))) / 2
+                  in translate (treeAreaX / 2 - xv,0) ff
       fitTime = fit (padding * 2 + treeAreaX, padding) infoBox
       fitMoves = fit (padding * 2 + treeAreaX
                      ,padding * 2 + infoY) infoBox
