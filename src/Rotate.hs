@@ -3,6 +3,7 @@ import Reactive.Banana.Frameworks
 
 import Debug.Trace (trace)
 
+import Text.Printf
 import Text.Read (readMaybe)
 import System.Random
 import qualified Data.Map as M
@@ -195,7 +196,7 @@ rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
                         in fitTime (translate (100,25)
                                               (text (0,0)
                                                     (250,200)
-                                                    (show t)))
+                                                    (timestring t)))
 
 layouts (conf,sc,h) = 
   let padding = 30 :: Double
@@ -228,3 +229,7 @@ randomColorTrees i r =
       tree = randomTree nodes 
   in (tree g2, tree g3)
 
+timestring :: Int -> String
+timestring time = let seconds = time `mod` 60
+                      minutes =  time `div` 60
+                  in printf "%02d:%02d" minutes seconds
