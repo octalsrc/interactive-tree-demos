@@ -35,7 +35,14 @@
 
            Each ID should be the configuration
            option's name with "sc-main-option-" 
-           prepended to it. -->
+           prepended to it. 
+           
+           Note: None of these options are necessary.  If they
+                 are not specified in this html document, the
+                 hardcoded defaults from the Haskell source-code
+                 will be used. (also, unless this becomes out-of-date,
+                 all the options filled in here are the same as the 
+                 defaults from the Haskell source-code) -->
 
       <!-- Integer :: The number of nodes in a tree
                       if not modified by the user -->
@@ -51,6 +58,13 @@
                          game on successful match (the win-state) -->
       <div id="sc-main-option-use-game-mode"
 	   >True</div>
+
+      <!-- Integer :: The number of frames to use to animate rotations
+                      when not under time in game-mode.  This will also
+                      change the amount of time that rotation animations
+                      will take (frames are drawn at 24fps).  -->
+      <div id="sc-main-option-non-game-num-frames"
+	   >10</div>
 
       <!-- Integer :: canvas width -->
       <div id="sc-main-option-canvas-width"

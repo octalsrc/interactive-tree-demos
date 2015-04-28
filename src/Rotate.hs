@@ -22,6 +22,7 @@ data Config = Config { canvasWidth :: Double
                      , defaultTreeSize :: Int
                      , maximumTreeSize :: Int
                      , gameMode :: Bool
+                     , slowFrames :: Int
                      , canvasStyle :: String
                      , treeSizeInputID :: String
                      , seedInputID :: String
@@ -37,6 +38,7 @@ prep = do let n = "main"
                   <*> option n "default-tree-size" 14
                   <*> option n "maximum-tree-size" 99
                   <*> option n "use-game-mode" True
+                  <*> option n "non-game-num-frames" 10
                   <*> option n "canvas-style" s
                   <*> option n "tree-size-input-id" "numnodes"
                   <*> option n "seed-input-id" "seed"
@@ -167,9 +169,15 @@ treeUp (conf,sc,h) tr gs = GameState (gsRefTree gs)
 
 render :: Env -> GameState -> IO ()
 render (conf,sc,h) gs = 
-  (sequence_ . fmap (animate sc "main" 4 42)) (format (conf,sc,h) gs)
+  let (b,sf) = format (conf,sc,h) gs
+      frames = if gameMode conf
+                  then 4
+                  else slowFrames conf
+  in if b
+        then (sequence_ . fmap (animate sc "main" frames 42)) sf
+        else (sequence_ . fmap (write sc "main")) sf
 
-format :: Env -> GameState -> [SuperForm]
+format :: Env -> GameState -> (Bool,[SuperForm])
 format (conf,sc,h) gs =
   let (fitRef, fitWork, fitMoves, fitWin, fitTime) = 
         layouts (conf,sc,h)
@@ -182,16 +190,17 @@ format (conf,sc,h) gs =
                                          then "Match"
                                          else "\x2260")
       mc = infoTab "-- Moves --" (show (gsMoveCount gs))
-  in [ combine [ fitRef (prepSTree Black ref)
-               , fitMoves mc
-               , fitWin (win False)
-               , fitWork (gsForm gs) ]
-     , combine ([ fitRef (prepSTree Black ref)
+  in ((not . isBlank) (gsForm gs)
+     ,[ combine [ fitRef (prepSTree Black ref)
                 , fitMoves mc
-                , fitWin (win (complete gs)) ]
-                ++ (if gameMode conf && complete gs -- win-state!
-                       then [fitWork (prepSTree lcol work)]
-                       else [fitWork (prepTree h lcol work)])) ]
+                , fitWin (win False) 
+                , fitWork (gsForm gs)]
+      , combine ([ fitRef (prepSTree Black ref)
+                 , fitMoves mc
+                 , fitWin (win (complete gs)) ]
+                 ++ (if gameMode conf && complete gs -- win-state!
+                        then [fitWork (prepSTree lcol work)]
+                        else [fitWork (prepTree h lcol work)])) ])
 
 rwatch :: Env -> Int -> IO ()
 rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)
