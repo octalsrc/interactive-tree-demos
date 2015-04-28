@@ -21,7 +21,7 @@ data Config = Config { canvasWidth :: Double
                      , canvasHeight :: Double
                      , defaultTreeSize :: Int
                      , maximumTreeSize :: Int
-                     , useStopwatch :: Bool
+                     , gameMode :: Bool
                      , canvasStyle :: String
                      , treeSizeInputID :: String
                      , seedInputID :: String
@@ -36,13 +36,14 @@ prep = do let n = "main"
                   <*> option n "canvas-height" 500
                   <*> option n "default-tree-size" 16
                   <*> option n "maximum-tree-size" 99
-                  <*> option n "use-stopwatch" True
+                  <*> option n "use-game-mode" True
                   <*> option n "canvas-style" s
                   <*> option n "tree-size-input-id" "numnodes"
                   <*> option n "seed-input-id" "seed"
                   <*> option n "new-game-button-id" "newgame"
                   <*> option n "current-seed-id" "currentseed"
           (clock,tick) <- newAddHandler
+          print (gameMode conf)
           sc <- startCanvas n 
                             ( canvasWidth conf
                             , canvasHeight conf )
@@ -188,7 +189,7 @@ format (conf,sc,h) gs =
      , combine ([ fitRef (prepSTree Black ref)
                 , fitMoves mc
                 , fitWin (win (complete gs)) ]
-                ++ (if complete gs -- win-state!
+                ++ (if gameMode conf && complete gs -- win-state!
                        then [fitWork (prepSTree lcol work)]
                        else [fitWork (prepTree h lcol work)])) ]
 
@@ -197,7 +198,10 @@ rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)
 
 rformat :: Env -> Int -> SuperForm
 rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
-                        in fitTime (infoTab "-- Time --" (timestring t))
+                            message = if gameMode conf
+                                         then timestring t
+                                         else "\x221E"
+                        in fitTime (infoTab "-- Time --" message)
 
 infoTab :: String -> String -> SuperForm
 infoTab name info = combine [rekt (0,0) (200,90) False Black
