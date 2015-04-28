@@ -9,19 +9,11 @@
       tree rotations?  Click nodes in the <span style="font-weight:
       bold;">bottom</span> tree to rotate them.</p>
 
-    <p style="font-size: 1.3em;">
-      The Seed for these trees is: <span id="tellseed" style="color:
-      blue;"></span>
-    </p>
-
-    <p style = "font-size: 1.3em;"> Time remaining: <span id="timer"
-    style="color: red;"></span> seconds</p>
-
     <div id="sc-main-div"></div>
 
     <div style="height: 4;"></div>
 
-    <button id="newgame">Restart</button>
+    <button id="newgame">Start New Game</button>
     
     <div class="space" style="height: 0.6em;"></div>
     
@@ -33,6 +25,8 @@
     
     <span> Seed (Optional): </span>
     <input id="seed" type="text" name="b" value="" />
+
+    <p>(The seed of the current game is: <span id="currentseed"></span>)</p>
 
     <div id="sc-main-config" style="visibility: hidden;">
 
@@ -77,6 +71,11 @@
       <!-- String :: ID of the seed input element -->
       <div id="sc-main-option-seed-input-id"
 	   >seed</div>
+
+      <!-- String :: ID of element where the current game seed
+                     is listed -->
+      <div id="sc-main-option-current-seed-id"
+	   >currentseed</div>
 
       <!-- String :: ID of the new-game button -->
       <div id="sc-main-option-new-game-button-id"

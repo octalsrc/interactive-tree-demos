@@ -25,7 +25,8 @@ data Config = Config { canvasWidth :: Double
                      , canvasStyle :: String
                      , treeSizeInputID :: String
                      , seedInputID :: String
-                     , newGameButtonID :: String}
+                     , newGameButtonID :: String
+                     , currentSeedID :: String }
 
 prep :: IO (SuperCanvas, Config, AddHandler Double)
 prep = do let n = "main"
@@ -40,6 +41,7 @@ prep = do let n = "main"
                   <*> option n "tree-size-input-id" "numnodes"
                   <*> option n "seed-input-id" "seed"
                   <*> option n "new-game-button-id" "newgame"
+                  <*> option n "current-seed-id" "currentseed"
           (clock,tick) <- newAddHandler
           sc <- startCanvas n 
                             ( canvasWidth conf
@@ -66,6 +68,7 @@ readNewGame (conf,sc,h) =
      let numNodes = max minNodes (min maxNodes nn)
      changeInput (treeSizeInputID conf) (show numNodes)
      changeInput (seedInputID conf) ("")
+     changeElem (currentSeedID conf) (show seed)
      return (newGameState (conf,sc,h) (NewGame numNodes seed))
 
 data GameState = GameState { gsRefTree :: ColorTree
