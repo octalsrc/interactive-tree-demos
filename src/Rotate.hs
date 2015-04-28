@@ -167,7 +167,7 @@ treeUp (conf,sc,h) tr gs = GameState (gsRefTree gs)
 
 render :: Env -> GameState -> IO ()
 render (conf,sc,h) gs = 
-  (sequence_ . fmap (animate sc "main" 5 42)) (format (conf,sc,h) gs)
+  (sequence_ . fmap (animate sc "main" 4 42)) (format (conf,sc,h) gs)
 
 format :: Env -> GameState -> [SuperForm]
 format (conf,sc,h) gs =
