@@ -5,6 +5,7 @@ main = startCanvas "main"
                    (900,500) 
                    "background: lightgray;"
                    ["main"]
+                   (\_ -> return ())
        >>= test
 
 test sc = threadDelay 1000000 >> animate sc "main" 20 (42 * 1000) (s as)

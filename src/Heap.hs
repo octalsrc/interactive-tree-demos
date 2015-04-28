@@ -12,6 +12,7 @@ main = startCanvas "main"
                    (900,500) 
                    "background: lightgray;"
                    ["main"]
+                   (\_ -> return ())
        >>= treestuff
 
 type HeapTree = BiTree (Int, Bool)

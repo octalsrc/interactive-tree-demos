@@ -17,12 +17,15 @@ module Super.Canvas ( circle
                     , travel
                     , getCanvas
                     , write
+                    , writeS
                     , idFactor
                     , idLocation
                     , idVector
                     , animate
+                    , animateS
                     , readElem
                     , safeReadElem
+                    , now
                     , changeInput
                     , readInput
                     , safeReadInput
@@ -36,7 +39,7 @@ module Super.Canvas ( circle
                     , startCanvas ) where
 
 import Control.Event.Handler (Handler)
-import Reactive.Banana
+import Reactive.Banana hiding (now)
 import Reactive.Banana.Frameworks
 import Data.Queue
 import Text.Read (readMaybe)
@@ -50,14 +53,15 @@ import Super.Canvas.Concurrent
 data SuperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
                       , scCState  :: CState
-                      , scSize    :: BoundingBox}
+                      , scSize    :: BoundingBox }
 
 startCanvas :: String 
             -> BoundingBox 
             -> String
             -> [String]
+            -> Handler Double
             -> IO (SuperCanvas)
-startCanvas name size style chans = 
+startCanvas name size style chans clock = 
   do can <- insertCanvas name size style
   
      cH <- newAddHandler
@@ -66,11 +70,17 @@ startCanvas name size style chans =
      network <- compile (mkNet (fst cH) (fst aH))
      actuate network
              
+     startTime <- now
      cstate <- newCState chans
      let writer = writeToCanvas size can
-     startBrowserPageRun (stepCState cstate writer)
+     startBrowserPageRun (stepCState cstate writer 
+                          >> tick clock startTime)
 
      return (SC can (snd aH) cstate size)
+
+tick :: Handler Double -> Double -> IO ()
+tick clock startTime = 
+  (-) <$> now <*> pure startTime >>= clock
 
 mkNet c a = 
   do eClicks <- fromAddHandler c
@@ -100,10 +110,17 @@ travel v = Leaf . Travel v
 write :: SuperCanvas -> String -> SuperForm -> IO ()
 write sc chan sf = animate sc chan 1 0 sf
 
+writeS :: SuperCanvas -> String -> SuperForm -> IO ()
+writeS sc chan sf = animateS sc chan 1 0 sf
+
 animate :: SuperCanvas -> String -> Int -> Int -> SuperForm -> IO ()
 animate sc chan numFrames delay sf = 
   (scHandler sc) (actions sf) 
   >> enqueueDraws (scCState sc) chan delay (draws numFrames sf)
+
+animateS :: SuperCanvas -> String -> Int -> Int -> SuperForm -> IO ()
+animateS sc chan numFrames delay sf = 
+  enqueueDraws (scCState sc) chan delay (draws numFrames sf)
 
 checkB :: Location -> QualAction -> Bool
 checkB (x,y) ((a,b),(w,h),_) = x >= a
