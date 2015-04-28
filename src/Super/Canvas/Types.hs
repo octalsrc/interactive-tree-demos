@@ -89,6 +89,7 @@ actions = concat . f . qList 1
                        _ -> as) []
         q l b = fmap (\a -> (l,b,a))
 
+bounds :: SuperForm -> (Location, BoundingBox)
 bounds sc = 
   let bs = foldr (\e as -> 
                  case e of

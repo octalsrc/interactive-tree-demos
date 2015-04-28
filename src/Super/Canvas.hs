@@ -16,6 +16,7 @@ module Super.Canvas ( circle
                     , translate
                     , travel
                     , getCanvas
+                    , bounds
                     , write
                     , writeS
                     , idFactor
