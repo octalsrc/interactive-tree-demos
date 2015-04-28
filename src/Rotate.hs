@@ -34,7 +34,7 @@ prep = do let n = "main"
           conf <- Config
                   <$> option n "canvas-width" 900
                   <*> option n "canvas-height" 500
-                  <*> option n "default-tree-size" 16
+                  <*> option n "default-tree-size" 14
                   <*> option n "maximum-tree-size" 99
                   <*> option n "use-game-mode" True
                   <*> option n "canvas-style" s
