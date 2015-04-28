@@ -152,39 +152,42 @@ upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
 
 
 prepTree :: Handler TreeR 
+         -> Color
          -> BiTree (Bool, Color) 
          -> SuperForm
-prepTree f tree = trav f (top tree)
+prepTree f lcol tree = trav f lcol (top tree)
 
 trav :: Handler TreeR 
+     -> Color
      -> QualTree (Bool, Color)
      -> SuperForm
-trav fire (BiNode l (True,col) r, c) = 
+trav fire lcol (BiNode l (True,col) r, c) = 
   let qt = (BiNode l (True,col) r, c)
       loc = findLoc qt
       linedest = findLoc (qtUp qt) - loc
       node = (sketchNode 
+                lcol
                 col 
                 linedest
                 [fire (rotatos qt)])
   in combine 
-       [ (trav fire (qtLeft qt))
-       , (trav fire (qtRight qt))
+       [ (trav fire lcol (qtLeft qt))
+       , (trav fire lcol (qtRight qt))
        , translate loc node       ]
-trav _ _ = blank
+trav _ _ _ = blank
 
 prepSTree = prepTree (\_ -> return ())
 
 prepRTree qt = let rloc = findLoc (qtUpMost qt)
                    tloc = findLoc (fst qt, Top)
-               in translate ((0,0) - tloc) ((prepSTree (fst qt)))
+               in translate ((0,0) - tloc) ((prepSTree Gray (fst qt)))
 
 mkInvis (BiNode l (_,col) r, c) = (BiNode l (False,col) r, c)
 mkInvis t = t
 
 rotatos :: QualTree (Bool, Color) 
         -> TreeR
-rotatos (t, Top) = TreeR t (prepSTree t)
+rotatos (t, Top) = TreeR t (prepSTree Gray t)
 rotatos qt = TreeR ((fst . qtUpMost . rotate) qt)
                    (combine [ rTopTree qt
                             , rBottomTree qt
@@ -210,7 +213,7 @@ rDownTree qt = let rqt = rotate qt
                    tree = prepRTree ((qtUp . mkInvis) qt)
                in (travel vect . translate loc) tree
 
-rTopTree qt = prepSTree ((fst . qtUpMost . mkInvis . qtUp) qt)
+rTopTree qt = prepSTree Gray ((fst . qtUpMost . mkInvis . qtUp) qt)
 
 rBottomTree qt = let loc = findLoc (qtCull qt)
                  in translate loc (prepRTree (qtCull qt))
@@ -251,20 +254,20 @@ sketchHeapNode bl col ploc acs =
       circ = rekt (idLocation - (confSize, confSize)) (confSize * 2, confSize * 2) True rcolor
       tex = text (idLocation) (confSize * 2, confSize * 1.2) (show col)
   in if bl
-        then combine [ line idLocation ploc 2
+        then combine [ line idLocation ploc 2 Black
                      , addOnClick 
                          acs 
                          circ 
                      , tex ] 
-        else combine [ line idLocation ploc 2
+        else combine [ line idLocation ploc 2 Black
                      , circ
                      , tex ]
 
 
-sketchNode :: Color -> Location -> [IO ()] -> SuperForm
-sketchNode col ploc acs = 
+sketchNode :: Color -> Color -> Location -> [IO ()] -> SuperForm
+sketchNode lcol col ploc acs = 
   let circ = circle idLocation confSize True col
-  in combine [ line idLocation ploc 2
+  in combine [ line idLocation ploc 2 lcol
              , addOnClick 
                  acs 
                  circ ] 

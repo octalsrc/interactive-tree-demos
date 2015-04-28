@@ -103,7 +103,7 @@ bounds sc =
   in ( (minimum xl, minimum yl)
      , (maximum xs - minimum xl, maximum ys - minimum yl))
 
-data Color = Red | Green | Blue | Yellow | White | Grey | Black
+data Color = Red | Green | Blue | Yellow | White | Gray | Black
              deriving (Show, Enum, Bounded, Eq)
 
 instance Random Color where
@@ -143,7 +143,7 @@ idLocation = (0,0) :: Location
 data Primitive = -- radius, fill, Color
                  Circle Double Bool Color
                  -- offset-dest, lthick
-               | Line Vector Double
+               | Line Vector Double Color
                  -- (width,height), text
                | Text BoundingBox String
                  -- (width,height), fill, Color
@@ -152,7 +152,7 @@ data Primitive = -- radius, fill, Color
 
 scalePrim :: Factor -> Primitive -> Primitive
 scalePrim f (Circle r b c) = Circle (r * (fst f)) b c
-scalePrim f (Line v t) = Line (v * f) t
+scalePrim f (Line v t c) = Line (v * f) t c
 scalePrim f (Text b s) = Text (b * f) s
 scalePrim f (Rekt b fill c) = Rekt (b * f) fill c
 

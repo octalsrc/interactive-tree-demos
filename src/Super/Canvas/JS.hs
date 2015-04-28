@@ -170,19 +170,21 @@ writePrim c (l,p) =
             -- putStrLn ("Drawing a circle...")
             beginPath c 
             fillStyle rc gc bc 255 c
+            lineWidth 2 c
             strokeStyle 0 0 0 255 c
             arc x y r 0 (2 * pi) True c
             if f
                then fill c >> stroke c
                else stroke c 
             return ()
-       Line (xd,yd) w ->
+       Line (xd,yd) w col ->
          do -- putStrLn ("Drawing a line...")
+            let (rc,gc,bc) = style col
             beginPath c
             moveTo x y c
             lineTo (x + xd) (y + yd) c
             lineWidth w c
-            strokeStyle 0 0 0 255 c
+            strokeStyle rc gc bc 255 c
             stroke c
             return ()
        Text (w,h) s ->
@@ -191,6 +193,7 @@ writePrim c (l,p) =
        Rekt (w,h) fill col ->
          do let (rc, gc, bc) = style col
             -- putStrLn ("Drawing a rekt...")
+            lineWidth 2 c
             if fill
                then fillStyle rc gc bc 255 c
                     >> fillRect x y w h c 
@@ -199,7 +202,7 @@ writePrim c (l,p) =
             return ()
 
 style White = (255,255,255)
-style Grey = (140,140,140)
+style Gray = (90,90,90)
 style Black = (0,0,0)
 style Red = (255, 0, 0)
 style Green = (0, 190, 0)

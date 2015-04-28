@@ -169,22 +169,25 @@ format :: Env -> GameState -> [SuperForm]
 format (conf,sc,h) gs =
   let (fitRef, fitWork, fitMoves, fitWin, fitTime) = 
         layouts (conf,sc,h)
+      lcol = if complete gs
+                then Black
+                else Gray
       ref = gsRefTree gs
       work = gsWorkTree gs
-      win = infoTab "-- Status --" (if complete gs
-                                       then "Match"
-                                       else "\x2260")
+      win b = infoTab "-- Status --" (if b
+                                         then "Match"
+                                         else "\x2260")
       mc = infoTab "-- Moves --" (show (gsMoveCount gs))
-  in [ combine [ fitRef (prepSTree ref)
+  in [ combine [ fitRef (prepSTree Black ref)
                , fitMoves mc
-               , fitWin win
+               , fitWin (win False)
                , fitWork (gsForm gs) ]
-     , combine ([ fitRef (prepSTree ref)
+     , combine ([ fitRef (prepSTree Black ref)
                 , fitMoves mc
-                , fitWin win ]
+                , fitWin (win (complete gs)) ]
                 ++ (if complete gs -- win-state!
-                       then [fitWork (prepSTree work)]
-                       else [fitWork (prepTree h work)])) ]
+                       then [fitWork (prepSTree lcol work)]
+                       else [fitWork (prepTree h lcol work)])) ]
 
 rwatch :: Env -> Int -> IO ()
 rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)

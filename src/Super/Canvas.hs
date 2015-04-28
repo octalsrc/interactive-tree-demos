@@ -147,14 +147,14 @@ circle loc rad fill col = primElev loc
                                    (rad * 2, rad * 2) 
                                    (Circle rad fill col)
 
-line :: Location -> Vector -> Double -> SuperForm
-line loc dest thick = 
+line :: Location -> Vector -> Double -> Color -> SuperForm
+line loc dest thick col = 
   let minx = min (fst loc) (fst (loc + dest))
       miny = min (snd loc) (snd (loc + dest))
       maxx = max (fst loc) (fst (loc + dest))
       maxy = max (snd loc) (snd (loc + dest))
       box = (maxx, maxy) - (minx, miny)
-  in primElev loc (minx, miny) box (Line dest thick)
+  in primElev loc (minx, miny) box (Line dest thick col)
 
 text :: Location -> BoundingBox -> String -> SuperForm
 text loc box str = 
