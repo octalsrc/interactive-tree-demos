@@ -87,7 +87,8 @@ newGameState (conf,sc,h) ng _ =
 initGame :: Env -> IO GameState
 initGame (conf,sc,h) = 
   do state <- readNewGame (conf,sc,h) <*> pure emptyState
-     render (conf,sc,h) state
+     render (conf,sc,h) state -- draw initial gamestate
+     rwatch (conf,sc,h) 0 -- draw initial stopwatch state
      return state
 
 treestuff (sc,conf,clock) = 
@@ -172,11 +173,11 @@ format (conf,sc,h) gs =
       work = gsWorkTree gs
       win = translate (100,25)
                       (text (0,0)
-                            (250,200)
+                            (300,30)
                             ("Complete!"))
       mc = translate (100,25) 
                      (text (0,0) 
-                           (200,100) 
+                           (300,30) 
                            ("Moves: " ++ show (gsMoveCount gs)))
   in [ combine [ fitRef (prepSTree ref)
                , fitMoves mc
@@ -195,8 +196,18 @@ rformat :: Env -> Int -> SuperForm
 rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
                         in fitTime (translate (100,25)
                                               (text (0,0)
-                                                    (250,200)
+                                                    (300,30)
                                                     (timestring t)))
+                                                    
+infoTab :: String -> String -> SuperForm
+infoTab name info = combine [translate (150,10)
+                                       (text (0,0)
+                                             (300,10)
+                                             name)
+                            ,translate (150,25)
+                                       (text (0,0)
+                                             (300, 30)
+                                             info)]
 
 layouts (conf,sc,h) = 
   let padding = 30 :: Double
@@ -211,12 +222,12 @@ layouts (conf,sc,h) =
 
       fitRef = fit (toTup padding) treeBox
       fitWork = fit (padding, padding * 2 + treeAreaY) treeBox
-      fitMoves = fit (padding * 2 + treeAreaX, padding) infoBox
+      fitTime = fit (padding * 2 + treeAreaX, padding) infoBox
+      fitMoves = fit (padding * 2 + treeAreaX
+                     ,padding * 2 + infoY) infoBox
+
       fitWin = fit (padding * 2 + treeAreaX
-                   ,padding * 2 + infoY) infoBox
-                   
-      fitTime = fit (padding * 2 + treeAreaX
-                    ,padding * 3 + infoY * 2) infoBox
+                   ,padding * 3 + infoY * 2) infoBox
 
   in (fitRef, fitWork, fitMoves, fitWin, fitTime)
 
