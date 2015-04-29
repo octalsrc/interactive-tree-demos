@@ -9,12 +9,17 @@ module Super.Trees ( BiTree (..)
                    , top
                    , sampleHeapTree
                    , prepHeapTree
-                   , qtUpMost 
                    , rotate
                    , prepTree
                    , prepSTree
                    , TreeR (..)
-                   , ColorTree (..) ) where
+                   , ColorTree (..)
+                   , qtUp
+                   , qtLeft
+                   , qtRight
+                   , qtUpMost
+                   , depth
+                   ,  ) where
 
 import Control.Event.Handler (Handler)
 import System.Random
