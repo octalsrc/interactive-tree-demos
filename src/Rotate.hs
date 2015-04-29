@@ -188,7 +188,7 @@ format (conf,sc,h) gs =
       work = gsWorkTree gs
       win b = infoTab "-- Status --" (if b
                                          then "Match"
-                                         else "\x2260")
+                                         else "Incomplete")
       mc = infoTab "-- Moves --" (show (gsMoveCount gs))
   in ((not . isBlank) (gsForm gs)
      ,[ combine [ fitRef (prepSTree Black ref)
