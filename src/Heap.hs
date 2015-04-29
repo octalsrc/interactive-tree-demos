@@ -7,6 +7,7 @@ import qualified Data.Map as M
 
 import Super.Canvas
 import Super.Trees
+import Super.Trees2
 
 main = startCanvas "main" 
                    (900,500) 
@@ -16,6 +17,22 @@ main = startCanvas "main"
        >>= treestuff
 
 type HeapTree = BiTree (Int, Bool)
+
+
+data HeapNode = HeapNode String deriving Eq
+
+instance Ord HeapNode where
+  compare = undefined
+
+data HeapGame = HeapGame { hgScore :: Int
+                         , hgState :: GameState }
+                         
+data GameState = Valid (Heap HeapNode)
+               | Edit (EditTree HeapNode)
+               | GameOver SuperForm
+
+newGame :: [HeapNode] -> HeapGame
+newGame ns = HeapGame 0 (Valid (Heap (makeHeap ns))) 
 
 treestuff sc = 
   do t <- newAddHandler
