@@ -18,8 +18,20 @@ module Super.Trees ( BiTree (..)
                    , qtLeft
                    , qtRight
                    , qtUpMost
+                   , qtCut
+                   , qtReplace
+
+                   , ZTree (..)
+                   , zTop
+                   , ztUp
+                   , ztLeft
+                   , ztRight
+                   , ztUpMost
+                   , ztCut
+                   , ztReplace
+
                    , depth
-                   ,  ) where
+                   , leaf ) where
 
 import Control.Event.Handler (Handler)
 import System.Random
@@ -102,24 +114,71 @@ instance Functor BiTree where
   fmap f EmptyTree = EmptyTree
   fmap f (BiNode l v r) = BiNode (fmap f l) (f v) (fmap f r)
 
+leaf :: a -> BiTree a
+leaf a = BiNode EmptyTree a EmptyTree
+
 data BTContext a = Top
                  | L a (BTContext a) (BiTree a)
                  | R (BiTree a) a (BTContext a)
                  deriving (Show, Eq)
 
+instance Functor BTContext where
+  fmap f Top = Top
+  fmap f (L v c r) = L (f v) (fmap f c) (fmap f r)
+  fmap f (R l v c) = R (fmap f l) (f v) (fmap f c)
+
 type QualTree a = (BiTree a, BTContext a)
+
+data ZTree a = ZTree { zTree :: (BiTree a)
+                     , zContext :: (BTContext a) }
+
+instance Functor ZTree where
+  fmap f (ZTree t c) = ZTree (fmap f t) (fmap f c)
+
+ztLeft   (ZTree (BiNode l v r) c)   = ZTree l (L v c r)
+ztRight  (ZTree (BiNode l v r) c)   = ZTree r (R l v c)
 
 qtLeft   (BiNode l v r, c)   = ( l, L v c r )
 qtRight  (BiNode l v r, c)   = ( r, R l v c )
+
+ztUp     (ZTree t (L v c r))        = ZTree (BiNode t v r) c
+ztUp     (ZTree t (R l v c))        = ZTree (BiNode l v t) c
+ztUp     (ZTree t Top      )        = ZTree t Top
 
 qtUp     (t, L v c r)        = (BiNode t v r, c)
 qtUp     (t, R l v c)        = (BiNode l v t, c)
 qtUp     (t, Top    )        = (t, Top         )
 
+ztUpMost :: ZTree a -> ZTree a
+ztUpMost (ZTree t (L v c r)) = ztUpMost (ZTree (BiNode t v r) c)
+ztUpMost (ZTree t (R l v c)) = ztUpMost (ZTree (BiNode l v t) c)
+ztUpMost (ZTree t Top)       = ZTree t Top
+
 qtUpMost :: QualTree a -> QualTree a
 qtUpMost (t, L v c r) = qtUpMost (BiNode t v r, c)
 qtUpMost (t, R l v c) = qtUpMost (BiNode l v t, c)
 qtUpMost (t, Top)     = (t, Top)
+
+ztReplace :: a -> ZTree a -> ZTree a
+ztReplace v (ZTree (BiNode l _ r) c) = ZTree (BiNode l v r) c
+ztReplace v (ZTree EmptyTree c) = ZTree (leaf v) c
+
+qtReplace :: a -> QualTree a -> QualTree a
+qtReplace v (BiNode l _ r,c) = (BiNode l v r,c)
+qtReplace _ qt = qt
+
+ztCut :: ZTree a -> ZTree a
+ztCut (ZTree _ (L v c r)) = ZTree (BiNode EmptyTree v r) c
+ztCut (ZTree _ (R l v c)) = ZTree (BiNode l v EmptyTree) c
+ztCut (ZTree _ Top)       = ZTree EmptyTree Top
+
+qtCut :: QualTree a -> QualTree a
+qtCut (_,L v c r) = (BiNode EmptyTree v r,c)
+qtCut (_,R l v c) = (BiNode l v EmptyTree,c)
+qtCut (_,Top) = (EmptyTree,Top)
+
+zTop :: BiTree a -> ZTree a
+zTop t = ZTree t Top
 
 top :: BiTree a -> QualTree a
 top t = (t, Top)
@@ -295,3 +354,4 @@ rotate ( (BiNode l v r), (L p c t) ) =
 rotate ( (BiNode l v r), (R t p c) ) = 
   ( (BiNode (BiNode t p l) v r), c )
 rotate ( tree, Top ) = ( tree, Top )
+
