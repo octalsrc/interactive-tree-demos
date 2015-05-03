@@ -110,7 +110,12 @@ data Color = Red
              | Yellow 
              | LightRed 
              | LightGreen 
-             | LightBlue 
+             | LightBlue
+             | FlatBlue
+             | Orange
+             | Purple
+             | LightPurple
+             | Manilla
              | LightYellow 
              | White 
              | Gray 

@@ -85,28 +85,28 @@ writeState env (Valid (Heap t)) =
                                         (fmap (makeQ Unfocused) t))
          doRemMin = (runM env) (modRemoveMin env)
          bRemMin = (fitControl2 env . addOnClick [doRemMin]) 
-                     (buttonForm "Remove Min" LightRed)
+                     (buttonForm "Remove Min" LightPurple)
          newNode = (HeapNode . fst) (randomR randRange g)
          doAddNew = (runM env) (modInsertNew env newNode)
          bAddNew = (fitControl1 env . addOnClick [doAddNew]) 
                      (buttonForm "Insert New" LightBlue)
      (write (sc env) "main" . combine) [tree,bRemMin,bAddNew]
-     message env "The heap is valid."
+     message env LightGreen "The heap is valid."
 writeState env (RemoveMin (EditTree t)) = 
   writeEditState env t (rmNodeForm env)
 writeState env (InsertNew (EditTree t)) = 
   writeEditState env t (insNodeForm env)
 writeState env (GameOver) = 
-  message env "Invalid heap! Violations are marked in red."
+  message env LightRed "Invalid heap! Violations are marked in red."
   >> writeS (sc env) 
             "defbuttons" 
             (combine [fitControl1 env (buttonForm "" Gray)
                      ,fitControl2 env (buttonForm "" Gray)])
 
-messageForm :: String -> SuperForm
-messageForm str = combine [rekt (0,0) (500,30) True White
-                          ,rekt (0,0) (500,30) False Black
-                          ,text (250,15) (490,15) str]
+messageForm :: Color -> String -> SuperForm
+messageForm col str = combine [rekt (0,0) (500,30) True col
+                              ,rekt (0,0) (500,30) False Black
+                              ,text (250,15) (490,15) str]
 
 buttonForm :: String -> Color -> SuperForm
 buttonForm str col = combine [rekt (1,1) (160,30) False Black
@@ -121,13 +121,15 @@ writeEditState env t nf =
                                      (zTree (ztUpMost t)))
       doCommit = (runM env) (modValidate env)
       bCommit = (fitControl1 env . addOnClick [doCommit]) 
-                  (buttonForm "Validate" LightGreen)
+                  (buttonForm "Validate" Orange)
       blank2 = fitControl2 env (buttonForm "" Gray)
   in (write (sc env) "main" . combine) [tree,bCommit,blank2]
-     >> message env "Edit Mode: Correct the heap if necessary."
+     >> message env LightYellow "Edit Mode: Correct the heap if necessary."
 
-message :: Env -> String -> IO ()
-message env = writeS (sc env) "message" . fitMessageArea env . messageForm
+message :: Env -> Color -> String -> IO ()
+message env col = writeS (sc env) "message" 
+                  . fitMessageArea env 
+                  . messageForm col
 
 normalNodeForm (ZTree (BiNode _ n _) _) = nodeForm n
 normalNodeForm _ = (blank, const blank)
