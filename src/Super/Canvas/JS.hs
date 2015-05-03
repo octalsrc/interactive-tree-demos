@@ -175,7 +175,8 @@ writePrim c (l,p) =
             arc x y r 0 (2 * pi) True c
             if f
                then fill c >> stroke c
-               else stroke c 
+               else strokeStyle rc gc bc 255 c 
+                    >> stroke c 
             return ()
        Line (xd,yd) w col ->
          do -- putStrLn ("Drawing a line...")
