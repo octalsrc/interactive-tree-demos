@@ -202,13 +202,31 @@ writePrim c (l,p) =
                     >> strokeRect x y w h c
             return ()
 
-style White = (255,255,255)
-style Gray = (90,90,90)
-style Black = (0,0,0)
-style Red = (255, 0, 0)
-style Green = (0, 190, 0)
-style Blue = (0, 0, 230)
-style Yellow = (255, 170, 0)
+-- style White = (255,255,255)
+-- style Gray = (90,90,90)
+-- style Black = (0,0,0)
+-- sytle LightRed = (255,80,80)
+-- style LightGreen = (204,255,153)
+-- style LightBlue = (0,204,255)
+-- style LightYellow = (255,255,153)
+-- style Red = (255, 0, 0)
+-- style Green = (0, 190, 0)
+-- style Blue = (0, 0, 230)
+-- style Yellow = (255, 170, 0)
+
+style color = case color of
+                White -> (255,255,255)
+                Gray -> (90,90,90)
+                Black -> (0,0,0)
+                LightRed -> (255,80,80)
+                LightGreen -> (204,255,153)
+                LightBlue -> (0,204,255)
+                LightYellow -> (255,255,153)
+                Red -> (255, 0, 0)
+                Green -> (0, 190, 0)
+                Blue -> (0, 0, 230)
+                Yellow -> (255, 170, 0)
+                _ -> (2,2,2)
 
 type Coord = (Double, Double)
 

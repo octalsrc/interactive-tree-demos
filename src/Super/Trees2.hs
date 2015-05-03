@@ -37,7 +37,7 @@ lastElem (Heap t) = recr (zTop t)
   where recr (ZTree t c) = 
           case t of
             BiNode l _ r -> 
-              if shallow r >= shallow l
+              if depth r >= depth l
                  then (recr . ztRight) (ZTree t c)
                  else (recr . ztLeft) (ZTree t c)
             _ -> ztUp (ZTree t c)

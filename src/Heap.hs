@@ -83,12 +83,14 @@ writeState env (Valid (Heap t)) =
 
          doRemMin = (runM env) (modRemoveMin env)
          bRemMin = (fitControl1 env . addOnClick [doRemMin]) 
-                     (rekt (0,0) (50,150) True Red)
-                     
+                     (buttonForm "Remove Min" LightRed)
+                     --(rekt (0,0) (150,100) True Red)
+
          newNode = (HeapNode . fst) (randomR randRange g)
          doAddNew = (runM env) (modInsertNew env newNode)
          bAddNew = (fitControl2 env . addOnClick [doAddNew]) 
-                     (rekt (0,0) (50,150) True Blue)
+                     (buttonForm "Insert New" LightBlue)
+                     -- (rekt (0,0) (150,100) True Blue)
      -- (write (sc env) "tree" . combine) [tree]
      (write (sc env) "main" . combine) [tree,bRemMin,bAddNew]
 writeState env (RemoveMin (EditTree t)) = 
@@ -97,6 +99,12 @@ writeState env (InsertNew (EditTree t)) =
   writeEditState env t (insNodeForm env)
 writeState env (GameOver) = return ()
 
+buttonForm :: String -> Color -> SuperForm
+buttonForm str col = combine [rekt (1,1) (130,50) False Black
+                             ,rekt (0,0) (130,50) True col
+                             ,rekt (0,0) (130,50) False Black
+                             ,text (65,25) (120,50) str]
+
 writeEditState env t nf = 
   let tree = fitTreeArea env (toForm nodesize 
                                      zFindLoc 
@@ -104,7 +112,8 @@ writeEditState env t nf =
                                      (zTree (ztUpMost t)))
       doCommit = (runM env) (modValidate env)
       bCommit = (fitControl1 env . addOnClick [doCommit]) 
-                  (rekt (0,0) (50,150) True Green)
+                  (buttonForm "Validate" LightGreen)
+                  -- (rekt (0,0) (150,100) True Green)
   in (write (sc env) "main" . combine) [tree,bCommit]
 
 normalNodeForm (ZTree (BiNode _ n _) _) = nodeForm n
@@ -179,13 +188,13 @@ modInsertNew env n (Valid h) =
 modInsertNew _ _ s = return s
 
 fitTreeArea :: Env -> SuperForm -> SuperForm
-fitTreeArea env = fit (50,50) (300,300)
+fitTreeArea env = fit (30,120) (800,300)
 
 fitControl1 :: Env -> SuperForm -> SuperForm
-fitControl1 env = fit (450,50) (200,100)
+fitControl1 env = fit (30,30) (150,100)
 
 fitControl2 :: Env -> SuperForm -> SuperForm
-fitControl2 env = fit (450,300) (200,100)
+fitControl2 env = fit (190,30) (150,100)
 
 type HeapTree = BiTree (Int, Bool)
 
@@ -199,20 +208,20 @@ data QNode a s = QNode { qVal :: a
                        , qStatus :: s } deriving (Show)
 
 instance DrawableNode (QNode HeapNode Focus) where
-  nodeForm (QNode h Focused) = qForm h Yellow
+  nodeForm (QNode h Focused) = qForm h LightYellow
   nodeForm (QNode h Unfocused) = qForm h White
 
 instance DrawableNode (QNode HeapNode Status) where
   nodeForm (QNode h Unchecked) = nodeForm (QNode h Unfocused)
   nodeForm (QNode h Good) = 
-    let (f,_) = qForm h Green
+    let (f,_) = qForm h LightGreen
         l = (\ploc -> line (0,0) ploc 4 Green)
     in (f,l)
   nodeForm (QNode h BadChild) = 
-    let (f,_) = qForm h Red
+    let (f,_) = qForm h LightRed
         l = (\ploc -> line (0,0) ploc 4 Red)
     in (f,l)
-  nodeForm (QNode h BadParent) = qForm h Red
+  nodeForm (QNode h BadParent) = qForm h LightRed
 
 qForm :: HeapNode -> Color -> (SuperForm, LineForm) 
 qForm h c = let (t,line) = nodeForm h
@@ -221,7 +230,7 @@ qForm h c = let (t,line) = nodeForm h
             in (combine [r,o,t], line) 
 
 highlight :: Env -> SuperForm
-highlight env = circle (0,0) (3.2 * snd nodesize) False Yellow
+highlight env = circle (0,0) (3.2 * snd nodesize) False LightYellow
 
 instance Eq a => Eq (QNode a s) where
   (==) (QNode a _) (QNode b _) = a == b

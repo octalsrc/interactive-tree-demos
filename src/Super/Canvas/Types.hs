@@ -104,8 +104,17 @@ bounds sc =
   in ( (minimum xl, minimum yl)
      , (maximum xs - minimum xl, maximum ys - minimum yl))
 
-data Color = Red | Green | Blue | Yellow | White | Gray | Black
-             deriving (Show, Enum, Bounded, Eq)
+data Color = Red 
+             | Green 
+             | Blue 
+             | Yellow 
+             | LightRed 
+             | LightGreen 
+             | LightBlue 
+             | LightYellow 
+             | White 
+             | Gray 
+             | Black deriving (Show, Enum, Bounded, Eq)
 
 instance Random Color where
   random g = 
