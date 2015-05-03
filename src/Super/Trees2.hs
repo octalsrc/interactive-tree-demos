@@ -16,8 +16,8 @@ insert a (Heap t) = Heap (i a t)
           if a < v
              then i v (BiNode l a r)
              else if depth l > depth r
-                     then BiNode (i a l) v r
-                     else BiNode l v (i a r)
+                     then BiNode l v (i a r)
+                     else BiNode (i a l) v r
         i a EmptyTree = leaf a
 
 
@@ -58,23 +58,60 @@ type LineForm = (Location -> SuperForm)
 
 type Embedding a = (ZTree a -> Location)
 
-toForm :: Embedding a -> NodeForm a -> BiTree a -> SuperForm
-toForm a b c = nextNode a b (zTop c)
+toForm :: BoundingBox -> Embedding a -> NodeForm a -> BiTree a -> SuperForm
+toForm bb a b c = nextNode bb a b (zTop c)
 
-nextNode :: Embedding a -> NodeForm a -> ZTree a -> SuperForm
-nextNode findLoc nodeForm zt = 
-  let loc = findLoc zt
-      lineDest = findLoc (ztUp zt)
-      
-      (node,lineF) = nodeForm zt
-      line = lineF lineDest
-      
-      next = nextNode findLoc nodeForm
-      
-  in combine [translate loc line
-             ,next (ztLeft zt)
-             ,next (ztRight zt)
-             ,translate loc node]
-             
+nextNode :: BoundingBox -> Embedding a -> NodeForm a -> ZTree a -> SuperForm
+nextNode bb findLoc nodeForm zt = 
+  case zt of
+    ZTree (BiNode _ _ _) _ -> 
+      let loc = bb * findLoc zt
+          lineDest = bb * findLoc (ztUp zt) - loc
+          (node,lineF) = nodeForm zt
+          line = lineF lineDest
+
+          next = nextNode bb findLoc nodeForm
+
+      in combine [translate loc line
+                 ,next (ztLeft zt)
+                 ,next (ztRight zt)
+                 ,translate loc node]
+    _ -> blank
+
 class DrawableNode n where
   nodeForm :: n -> (SuperForm, LineForm)
+
+instance DrawableNode a => DrawableNode (ZTree a) where
+  nodeForm (ZTree (BiNode _ v _) _) = nodeForm v
+  nodeForm _ = (blank, const blank)
+
+zDepthOf :: ZTree a -> Int
+zDepthOf (ZTree _ Top) = 1
+zDepthOf t = ((+1) . zDepthOf . ztUp) t
+
+zFindLoc :: ZTree a -> Location
+zFindLoc tree = (fromIntegral (findX tree)
+                ,fromIntegral (zDepthOf tree - 1))
+
+findX :: ZTree a -> Int
+findX zt = case zt of
+             ZTree (BiNode l _ r) Top -> 
+               let lsubtree = (zTree . ztLeft) zt
+                   initXIndex = 0
+               in nextX initXIndex lsubtree
+             ZTree (BiNode l _ r) (L _ _ _) -> 
+               let rsubtree = (zTree . ztRight) zt
+                   initXIndex = 0
+               in findX (ztUp zt) - nextX initXIndex rsubtree - 1
+             ZTree (BiNode l _ r) (R _ _ _) -> 
+               let lsubtree = (zTree . ztLeft) zt
+                   initXIndex = 0
+               in findX (ztUp zt) + nextX initXIndex lsubtree + 1
+  where nextX :: Int -> BiTree a -> Int
+        nextX x (BiNode EmptyTree _ EmptyTree) =
+          x + 1 -- leaf node case
+        nextX x EmptyTree =
+          x -- absent child case
+        nextX x (BiNode l _ r) =
+          let x' = nextX x l 
+          in nextX (x' + 1) r
