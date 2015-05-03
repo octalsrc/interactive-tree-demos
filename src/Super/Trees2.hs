@@ -32,7 +32,15 @@ bottom (Heap t) = recr (zTop t)
                  else (recr . ztLeft) (ZTree t c)
             _ -> ZTree t c
 
-
+lastElem :: Ord a => Heap a -> ZTree a
+lastElem (Heap t) = recr (zTop t)
+  where recr (ZTree t c) = 
+          case t of
+            BiNode l _ r -> 
+              if depth r >= depth l
+                 then (recr . ztRight) (ZTree t c)
+                 else (recr . ztLeft) (ZTree t c)
+            _ -> ztUp (ZTree t c)
 
 upHeap :: EditTree a -> EditTree a
 upHeap (EditTree (ZTree (BiNode l v r) c)) = 
@@ -75,7 +83,7 @@ nextNode bb findLoc nodeForm zt =
       in combine [translate loc line
                  ,next (ztLeft zt)
                  ,next (ztRight zt)
-                 ,translate loc node]
+                 ,fit loc bb node]
     _ -> blank
 
 class DrawableNode n where
