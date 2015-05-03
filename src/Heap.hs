@@ -17,7 +17,7 @@ import Super.Trees2
 main = startCanvas "main" 
                    (900,500) 
                    "background: lightgray;"
-                   ["main","tree"]
+                   ["main","message","frame","defbuttons"]
                    (\_ -> return ())
        >>= startHeapGame
 
@@ -41,6 +41,9 @@ startHeapGame sc =
                        gameManips
                        runManip) >>= actuate
      writeState env initialGame
+     writeS sc "frame" frameForm
+
+frameForm = rekt (15,15) (870,470) False Black
 
 restartGame :: Env -> GameState -> StateModifier
 restartGame env newGame _ = tell [writeState env newGame] 
@@ -80,30 +83,36 @@ writeState env (Valid (Heap t)) =
                                         zFindLoc 
                                         normalNodeForm 
                                         (fmap (makeQ Unfocused) t))
-
          doRemMin = (runM env) (modRemoveMin env)
-         bRemMin = (fitControl1 env . addOnClick [doRemMin]) 
+         bRemMin = (fitControl2 env . addOnClick [doRemMin]) 
                      (buttonForm "Remove Min" LightRed)
-                     --(rekt (0,0) (150,100) True Red)
-
          newNode = (HeapNode . fst) (randomR randRange g)
          doAddNew = (runM env) (modInsertNew env newNode)
-         bAddNew = (fitControl2 env . addOnClick [doAddNew]) 
+         bAddNew = (fitControl1 env . addOnClick [doAddNew]) 
                      (buttonForm "Insert New" LightBlue)
-                     -- (rekt (0,0) (150,100) True Blue)
-     -- (write (sc env) "tree" . combine) [tree]
      (write (sc env) "main" . combine) [tree,bRemMin,bAddNew]
+     message env "The heap is valid."
 writeState env (RemoveMin (EditTree t)) = 
   writeEditState env t (rmNodeForm env)
 writeState env (InsertNew (EditTree t)) = 
   writeEditState env t (insNodeForm env)
-writeState env (GameOver) = return ()
+writeState env (GameOver) = 
+  message env "Invalid heap! Violations are marked in red."
+  >> writeS (sc env) 
+            "defbuttons" 
+            (combine [fitControl1 env (buttonForm "" Gray)
+                     ,fitControl2 env (buttonForm "" Gray)])
+
+messageForm :: String -> SuperForm
+messageForm str = combine [rekt (0,0) (500,30) True White
+                          ,rekt (0,0) (500,30) False Black
+                          ,text (250,15) (490,15) str]
 
 buttonForm :: String -> Color -> SuperForm
-buttonForm str col = combine [rekt (1,1) (130,50) False Black
-                             ,rekt (0,0) (130,50) True col
-                             ,rekt (0,0) (130,50) False Black
-                             ,text (65,25) (120,50) str]
+buttonForm str col = combine [rekt (1,1) (160,30) False Black
+                             ,rekt (0,0) (160,30) True col
+                             ,rekt (0,0) (160,30) False Black
+                             ,text (80,15) (155,17) str]
 
 writeEditState env t nf = 
   let tree = fitTreeArea env (toForm nodesize 
@@ -113,8 +122,12 @@ writeEditState env t nf =
       doCommit = (runM env) (modValidate env)
       bCommit = (fitControl1 env . addOnClick [doCommit]) 
                   (buttonForm "Validate" LightGreen)
-                  -- (rekt (0,0) (150,100) True Green)
-  in (write (sc env) "main" . combine) [tree,bCommit]
+      blank2 = fitControl2 env (buttonForm "" Gray)
+  in (write (sc env) "main" . combine) [tree,bCommit,blank2]
+     >> message env "Edit Mode: Correct the heap if necessary."
+
+message :: Env -> String -> IO ()
+message env = writeS (sc env) "message" . fitMessageArea env . messageForm
 
 normalNodeForm (ZTree (BiNode _ n _) _) = nodeForm n
 normalNodeForm _ = (blank, const blank)
@@ -188,13 +201,19 @@ modInsertNew env n (Valid h) =
 modInsertNew _ _ s = return s
 
 fitTreeArea :: Env -> SuperForm -> SuperForm
-fitTreeArea env = fit (30,120) (800,300)
+fitTreeArea env sf = let treeAreaX = 810
+                         ff = fit (45,120) (810,350) sf
+                         xv = (fst (snd (bounds ff))) / 2
+                     in translate (treeAreaX / 2 - xv + 8,0) ff
 
 fitControl1 :: Env -> SuperForm -> SuperForm
-fitControl1 env = fit (30,30) (150,100)
+fitControl1 env = fit (45,35) (150,100)
 
 fitControl2 :: Env -> SuperForm -> SuperForm
-fitControl2 env = fit (190,30) (150,100)
+fitControl2 env = fit (210,35) (150,100)
+
+fitMessageArea :: Env -> SuperForm -> SuperForm
+fitMessageArea env = fit (375,35) (480,100)
 
 type HeapTree = BiTree (Int, Bool)
 

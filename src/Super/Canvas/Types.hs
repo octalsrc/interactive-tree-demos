@@ -114,6 +114,7 @@ data Color = Red
              | LightYellow 
              | White 
              | Gray 
+             | DarkGray
              | Black deriving (Show, Enum, Bounded, Eq)
 
 instance Random Color where

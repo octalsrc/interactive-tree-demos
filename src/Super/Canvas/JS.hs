@@ -216,7 +216,8 @@ writePrim c (l,p) =
 
 style color = case color of
                 White -> (255,255,255)
-                Gray -> (90,90,90)
+                Gray -> (160,160,160)
+                DarkGray -> (90,90,90)
                 Black -> (0,0,0)
                 LightRed -> (255,80,80)
                 LightGreen -> (204,255,153)
