@@ -15,7 +15,7 @@ insert a (Heap t) = Heap (i a t)
   where i a (BiNode l v r) = 
           if a < v
              then i v (BiNode l a r)
-             else if depth l > depth r
+             else if shallow l > shallow r
                      then BiNode l v (i a r)
                      else BiNode (i a l) v r
         i a EmptyTree = leaf a
@@ -27,7 +27,7 @@ bottom (Heap t) = recr (zTop t)
   where recr (ZTree t c) = 
           case t of
             BiNode l _ r -> 
-              if depth l > depth r
+              if shallow l > shallow r
                  then (recr . ztRight) (ZTree t c)
                  else (recr . ztLeft) (ZTree t c)
             _ -> ZTree t c
@@ -37,7 +37,7 @@ lastElem (Heap t) = recr (zTop t)
   where recr (ZTree t c) = 
           case t of
             BiNode l _ r -> 
-              if depth r >= depth l
+              if shallow r >= shallow l
                  then (recr . ztRight) (ZTree t c)
                  else (recr . ztLeft) (ZTree t c)
             _ -> ztUp (ZTree t c)

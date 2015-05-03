@@ -31,6 +31,7 @@ module Super.Trees ( BiTree (..)
                    , ztReplace
 
                    , depth
+                   , shallow
                    , leaf ) where
 
 import Control.Event.Handler (Handler)
