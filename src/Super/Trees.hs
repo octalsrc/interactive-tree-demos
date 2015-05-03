@@ -132,7 +132,7 @@ instance Functor BTContext where
 type QualTree a = (BiTree a, BTContext a)
 
 data ZTree a = ZTree { zTree :: (BiTree a)
-                     , zContext :: (BTContext a) }
+                     , zContext :: (BTContext a) } deriving Show
 
 instance Functor ZTree where
   fmap f (ZTree t c) = ZTree (fmap f t) (fmap f c)

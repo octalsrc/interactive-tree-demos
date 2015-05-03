@@ -3,9 +3,9 @@ module Super.Trees2 where
 import Super.Canvas
 import Super.Trees
 
-data EditTree a = EditTree { etTree :: (ZTree a) }
+data EditTree a = EditTree { etTree :: (ZTree a) } deriving Show
 
-data Ord a => Heap a = Heap { hTree :: (BiTree a) }
+data Ord a => Heap a = Heap { hTree :: (BiTree a) } deriving Show
 
 newHeap :: Ord a => Heap a
 newHeap = Heap EmptyTree
@@ -45,19 +45,19 @@ lastElem (Heap t) = recr (zTop t)
 upHeap :: EditTree a -> EditTree a
 upHeap (EditTree (ZTree (BiNode l v r) c)) = 
   case c of
-    L u k p -> EditTree (ZTree (BiNode l u r) (L v k p))
-    R s u k -> EditTree (ZTree (BiNode l u r) (R s v k))
+    L u k p -> (EditTree . ztUp) (ZTree (BiNode l u r) (L v k p))
+    R s u k -> (EditTree . ztUp) (ZTree (BiNode l u r) (R s v k))
     Top -> EditTree (ZTree (BiNode l v r) Top)
 upHeap et = et -- Nothing happens if you try to upHeap an EmptyTree
 
 downHeapL :: EditTree a -> EditTree a
 downHeapL (EditTree (ZTree (BiNode (BiNode l u p) v r) c)) = 
-  EditTree (ZTree (BiNode (BiNode l v p) u r) c)
+  (EditTree . ztLeft) (ZTree (BiNode (BiNode l v p) u r) c)
 downHeapL et = et
 
 downHeapR :: EditTree a -> EditTree a
 downHeapR (EditTree (ZTree (BiNode l v (BiNode s u r)) c)) = 
-  EditTree (ZTree (BiNode l u (BiNode s v r)) c)
+  (EditTree . ztRight) (ZTree (BiNode l u (BiNode s v r)) c)
 downHeapR et = et
 
 type NodeForm a = (ZTree a -> (SuperForm, LineForm))
@@ -83,7 +83,7 @@ nextNode bb findLoc nodeForm zt =
       in combine [translate loc line
                  ,next (ztLeft zt)
                  ,next (ztRight zt)
-                 ,fit loc bb node]
+                 ,fit loc ((0.7,0.7) * bb) node]
     _ -> blank
 
 class DrawableNode n where
