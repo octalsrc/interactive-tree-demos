@@ -228,7 +228,7 @@ removeMin h = (EditTree
                . ztReplace (setQ Focused v) 
                . ztUpMost 
                . ztCut) (ZTree b c)
-  where (ZTree b c) = (fmap (makeQ Unfocused) . bottom) h
+  where (ZTree b c) = (fmap (makeQ Unfocused) . lastElem) h
         (BiNode _ v _) = b
 
 data HeapGame = HeapGame { hgScore :: Int
