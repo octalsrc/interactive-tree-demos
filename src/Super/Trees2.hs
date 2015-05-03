@@ -7,6 +7,9 @@ data EditTree a = EditTree { etTree :: (ZTree a) }
 
 data Ord a => Heap a = Heap { hTree :: (BiTree a) }
 
+newHeap :: Ord a => Heap a
+newHeap = Heap EmptyTree
+
 insert :: Ord a => a -> Heap a -> Heap a
 insert a (Heap t) = Heap (i a t)
   where i a (BiNode l v r) = 
