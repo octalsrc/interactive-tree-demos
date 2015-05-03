@@ -14,12 +14,86 @@ import Super.Canvas
 import Super.Trees
 import Super.Trees2
 
-main = startCanvas "main" 
-                   (900,500) 
-                   "background: lightgray;"
-                   ["main"]
-                   (\_ -> return ())
-       >>= treestuff
+main = Env <$> startCanvas "main" 
+                           (900,500) 
+                           "background: lightgray;"
+                           ["main"]
+                           (\_ -> return ())
+       >>= startHeapGame
+
+type StateModifier = GameState -> Writer [IO ()] GameState
+
+data Env = Env { sc :: SuperCanvas }
+
+
+startHeapGame :: Env -> IO ()
+startHeapGame env = 
+  do g <- newStdGen
+     (gameManips,runManip) <- newAddHandler 
+     attachButton "newnode" (restartGame env <$> readNewGame env) runManip
+     initialGame <- readNewGame env
+     compile (heapGame env
+                       (initialGame, [writeState env initialGame])
+                       gameManips
+                       runManip) >>= actuate
+
+restartGame :: Env -> GameState -> StateModifier
+restartGame env newGame _ = tell [writeState env newGame] 
+                            >> return newGame
+
+readNewGame :: Env -> IO GameState
+readNewGame env = 
+  do num <- safeReadInput "numnodes" 8 
+     g <- newStdGen
+     let nodes = take num (fmap HeapNode (randomRs randRange g))
+         heap = foldr insert newHeap nodes
+     return (Valid heap)
+
+heapGame env iGame gameMs runM = 
+  do eGameMs <- fromAddHandler gameMs
+     let gstate = fst <$> bGameM
+         vstate = snd <$> bGameM
+         bGameM =  accumB iGame (update <$> eGameMs)
+     -- visuals <- changes vstate
+     -- reactimate' (fmap snd <$> stateChanges)
+     return ()
+     
+update :: StateModifier -> (GameState,[IO ()]) -> (GameState,[IO ()])
+update m (gs,_) = runWriter (m gs)
+
+-- vResult :: Env 
+--         -> (Maybe (Heap HeapNode), VTrace HeapNode) 
+--         -> GameState 
+--         -> (GameState,ShowResult)
+-- vResult sc (Just h,tr) (RemoveMin _) = (Valid h, animateV sc tr)
+-- vResult sc (Just h,tr) (InsertNew _) = (Valid h, animateV sc tr)
+-- vResult _ _ s = s -- for any other state, this update does not have
+--                   -- definite meaning and should have no effect
+-- 
+-- applyManip :: Env 
+--            -> EditTree HeapNode 
+--            -> GameState 
+--            -> (GameState,ShowResult)
+-- applyManip sc e (RemoveMin _) = (RemoveMin e, writeState sc (RemoveMin e))
+-- applyManip sc e (InsertNew _) = (InsertNew e, writeState sc (InsertNew e))
+-- applyManip _ _ s = s
+
+visualize :: Env -> GameState -> VTrace HeapNode -> IO ()
+visualize = undefined
+
+writeState :: Env -> GameState -> IO ()
+writeState = undefined
+
+-- mkNet2 sc t b rs fire =
+--   do eTrees <- fromAddHandler t
+--      eButton <- fromAddHandler b
+--      let bAdd = stepper (\a -> EmptyTree) 
+--                         (fmap addNode' eAllTrees)
+--          eAllTrees = eTrees `union` (bAdd <@> eButton)
+--          eTreeForms = fmap (format4 fire) eAllTrees
+--          eForms = eTreeForms
+--      reactimate (fmap (write sc "main") eForms)
+-- 
 
 type HeapTree = BiTree (Int, Bool)
 
@@ -88,7 +162,8 @@ data HeapGame = HeapGame { hgScore :: Int
                          , hgState :: GameState }
                          
 data GameState = Valid (Heap HeapNode)
-               | Edit (EditTree HeapNode)
+               | RemoveMin (EditTree HeapNode)
+               | InsertNew (EditTree HeapNode)
                | GameOver SuperForm
 
 newGame :: [HeapNode] -> HeapGame
@@ -196,7 +271,7 @@ validate comp (EditTree t) =
 --          if lv
 --             then if rv
 --                     then tell nt >> return True
---                     else undefined
+--                     else `
 --             else undefined
 
 stamp :: s -> ZTree (QNode a s) -> ZTree (QNode a s)
