@@ -14,28 +14,33 @@ import Super.Canvas
 import Super.Trees
 import Super.Trees2
 
-main = Env <$> startCanvas "main" 
-                           (900,500) 
-                           "background: lightgray;"
-                           ["main"]
-                           (\_ -> return ())
+main = startCanvas "main" 
+                   (900,500) 
+                   "background: lightgray;"
+                   ["main","tree"]
+                   (\_ -> return ())
        >>= startHeapGame
 
 type StateModifier = GameState -> Writer [IO ()] GameState
 
-data Env = Env { sc :: SuperCanvas }
+data Env = Env { sc :: SuperCanvas
+               , runM :: StateModifier -> IO () }
+
+nodesize = (20,20)
 
 
-startHeapGame :: Env -> IO ()
-startHeapGame env = 
+startHeapGame :: SuperCanvas -> IO ()
+startHeapGame sc = 
   do g <- newStdGen
-     (gameManips,runManip) <- newAddHandler 
-     attachButton "newnode" (restartGame env <$> readNewGame env) runManip
+     (gameManips,runManip) <- newAddHandler
+     let env = Env sc runManip
+     attachButton "restart" (restartGame env <$> readNewGame env) runManip
      initialGame <- readNewGame env
      compile (heapGame env
                        (initialGame, [writeState env initialGame])
                        gameManips
                        runManip) >>= actuate
+     writeState env initialGame
 
 restartGame :: Env -> GameState -> StateModifier
 restartGame env newGame _ = tell [writeState env newGame] 
@@ -54,53 +59,121 @@ heapGame env iGame gameMs runM =
      let gstate = fst <$> bGameM
          vstate = snd <$> bGameM
          bGameM =  accumB iGame (update <$> eGameMs)
-     -- visuals <- changes vstate
-     -- reactimate' (fmap snd <$> stateChanges)
+     visuals <- changes vstate
+     reactimate' (fmap sequence_ <$> visuals)
      return ()
      
 update :: StateModifier -> (GameState,[IO ()]) -> (GameState,[IO ()])
 update m (gs,_) = runWriter (m gs)
 
--- vResult :: Env 
---         -> (Maybe (Heap HeapNode), VTrace HeapNode) 
---         -> GameState 
---         -> (GameState,ShowResult)
--- vResult sc (Just h,tr) (RemoveMin _) = (Valid h, animateV sc tr)
--- vResult sc (Just h,tr) (InsertNew _) = (Valid h, animateV sc tr)
--- vResult _ _ s = s -- for any other state, this update does not have
---                   -- definite meaning and should have no effect
--- 
--- applyManip :: Env 
---            -> EditTree HeapNode 
---            -> GameState 
---            -> (GameState,ShowResult)
--- applyManip sc e (RemoveMin _) = (RemoveMin e, writeState sc (RemoveMin e))
--- applyManip sc e (InsertNew _) = (InsertNew e, writeState sc (InsertNew e))
--- applyManip _ _ s = s
-
-visualize :: Env -> GameState -> VTrace HeapNode -> IO ()
-visualize = undefined
+visualize :: Env -> VTrace HeapNode -> IO ()
+visualize env = sequence_ . fmap (write (sc env) "tree" 
+                                  . toForm nodesize zFindLoc nodeForm 
+                                  . zTree)
 
 writeState :: Env -> GameState -> IO ()
-writeState = undefined
+writeState env (Valid (Heap t)) = 
+  do g <- newStdGen
+     let tree = fitTreeArea env (toForm nodesize zFindLoc normalNodeForm t)
 
--- mkNet2 sc t b rs fire =
---   do eTrees <- fromAddHandler t
---      eButton <- fromAddHandler b
---      let bAdd = stepper (\a -> EmptyTree) 
---                         (fmap addNode' eAllTrees)
---          eAllTrees = eTrees `union` (bAdd <@> eButton)
---          eTreeForms = fmap (format4 fire) eAllTrees
---          eForms = eTreeForms
---      reactimate (fmap (write sc "main") eForms)
--- 
+         doRemMin = (runM env) (modRemoveMin env)
+         bRemMin = (fitControl1 env . addOnClick [doRemMin]) 
+                     (rekt (0,0) (50,150) True Red)
+                     
+         newNode = (HeapNode . fst) (randomR randRange g)
+         doAddNew = (runM env) (modInsertNew env newNode)
+         bAddNew = (fitControl2 env . addOnClick [doAddNew]) 
+                     (rekt (0,0) (50,150) True Blue)
+     (write (sc env) "tree" . combine) [tree]
+     (write (sc env) "main" . combine) [bRemMin,bAddNew]
+writeState env (RemoveMin (EditTree t)) = 
+  writeEditState env t (rmNodeForm env)
+writeState env (InsertNew (EditTree t)) = 
+  writeEditState env t (insNodeForm env)
+writeState env (GameOver) = return ()
+
+writeEditState env t nf = 
+  let tree = fitTreeArea env (toForm nodesize zFindLoc nf (zTree t))
+      doCommit = (runM env) (modValidate env)
+      bCommit = (fitControl1 env . addOnClick [doCommit]) 
+                  (rekt (0,0) (50,150) True Green)
+  in (write (sc env) "tree" . combine) [tree]
+     >> (write (sc env) "main" . combine) [bCommit]
+
+normalNodeForm (ZTree (BiNode _ n _) _) = nodeForm n
+normalNodeForm _ = (blank, const blank)
+
+rmNodeForm :: Env -> NodeForm (QNode HeapNode Focus)
+rmNodeForm env zt = 
+  let (form,line) = nodeForm zt
+  in case zt of
+       ZTree _ (L (QNode _ Focused) _ _) -> 
+         (addOnClick [(runM env) (modSwap env downHeapL)] form, line)
+       ZTree _ (R _ (QNode _ Focused) _) -> 
+         (addOnClick [(runM env) (modSwap env downHeapR)] form, line)
+       _ -> (form,line)
+
+insNodeForm :: Env -> NodeForm (QNode HeapNode Focus)
+insNodeForm env zt = 
+  let (form,line) = nodeForm zt
+  in case zt of
+       ZTree (BiNode (BiNode _ (QNode _ Focused) _) _ _) _ -> 
+         (addOnClick [(runM env) (modSwap env upHeap)] form, line)
+       ZTree (BiNode _ _ (BiNode _ (QNode _ Focused) _)) _ -> 
+         (addOnClick [(runM env) (modSwap env upHeap)] form, line)
+       _ -> (form,line)
+
+modSwap :: Env 
+        -> (EditTree (QNode HeapNode Focus) -> EditTree (QNode HeapNode Focus)) 
+        -> StateModifier
+modSwap env mod (RemoveMin et) = 
+  let state = RemoveMin (mod et)
+  in tell [writeState env state] >> return state
+
+modValidate :: Env -> StateModifier
+modValidate env (RemoveMin et) = modValidateValid env et
+modValidate env (InsertNew et) = modValidateValid env et
+modValidate _ s = return s
+
+modValidateValid :: Env 
+                 -> EditTree (QNode HeapNode Focus) 
+                 -> Writer [IO ()] GameState
+modValidateValid env et = 
+  let (tree,trace) = validateM et
+      state = case tree of
+                Just h -> Valid h
+                _ -> GameOver
+  in tell [(visualize env trace)] 
+     >> tell [(writeState env state)]
+     >> return state
+
+modRemoveMin :: Env -> StateModifier
+modRemoveMin env (Valid h) = 
+  tell [writeState env state] >> return state
+  where state = RemoveMin (removeMin h)
+modRemoveMin _ s = return s
+
+modInsertNew :: Env -> HeapNode -> StateModifier
+modInsertNew env n (Valid h) = 
+  tell [writeState env state] >> return state
+  where state = InsertNew (carelessInsert n h)
+modInsertNew _ _ s = return s
+
+fitTreeArea :: Env -> SuperForm -> SuperForm
+fitTreeArea env = fit (50,50) (300,300)
+
+fitControl1 :: Env -> SuperForm -> SuperForm
+fitControl1 env = fit (450,50) (200,100)
+
+fitControl2 :: Env -> SuperForm -> SuperForm
+fitControl2 env = fit (450,300) (200,100)
 
 type HeapTree = BiTree (Int, Bool)
 
 data HeapNode = HeapNode Int deriving (Eq, Ord)
 
 instance DrawableNode HeapNode where
-  nodeForm (HeapNode v) = (text (0,0) (200,100) (show v)
+  nodeForm (HeapNode v) = (text (0,0) (20,10) (show v)
                           ,(\ploc -> line (0,0) ploc 2 Black))
 
 data QNode a s = QNode { qVal :: a
@@ -162,9 +235,9 @@ data HeapGame = HeapGame { hgScore :: Int
                          , hgState :: GameState }
                          
 data GameState = Valid (Heap HeapNode)
-               | RemoveMin (EditTree HeapNode)
-               | InsertNew (EditTree HeapNode)
-               | GameOver SuperForm
+               | RemoveMin (EditTree (QNode HeapNode Focus))
+               | InsertNew (EditTree (QNode HeapNode Focus))
+               | GameOver
 
 newGame :: [HeapNode] -> HeapGame
 newGame ns = HeapGame 0 (Valid (Heap (makeHeap ns))) 
@@ -245,34 +318,6 @@ validate comp (EditTree t) =
   where valid v (BiNode l u r) = 
           (comp v u) && valid v l && valid v r
         valid _ _ = True
-
--- validateM :: (Ord a, Monoid w) 
---           => (a -> a -> Bool) 
---           -> EditTree a 
---           -> Writer w (Maybe (Heap a))
--- validateM comp (EditTree t) = 
---   case nt of
---     (ZTree (BiNode l v r) _) -> 
---       do c <- check nt
---          if c
---             then return ((Just . Heap . zTree . fmap qVal) t)
---             else return Nothing
---   where nt = (fmap (setQ Unchecked) . ztUpMost) t
---             
--- check :: (Ord a, Monoid w) 
---       => (a -> a -> Bool) 
---       -> ZTree (QNode a Status) 
---       -> Writer w Bool
--- check comp nt = 
---   case nt of
---     (ZTree (BiNode _ v _) _) -> 
---       do lv <- follow comp v (qtLeft nt)
---          rv <- follow comp v (qtRight nt)
---          if lv
---             then if rv
---                     then tell nt >> return True
---                     else `
---             else undefined
 
 stamp :: s -> ZTree (QNode a s) -> ZTree (QNode a s)
 stamp s (ZTree (BiNode l (QNode v _) r) c) = 

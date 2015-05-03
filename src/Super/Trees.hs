@@ -107,7 +107,9 @@ sampleHeapTree i n =
      else EmptyTree
 
 data BiTree a = EmptyTree 
-              | BiNode (BiTree a) a (BiTree a) 
+              | BiNode { btLeft :: BiTree a
+                       , btVal  :: a
+                       , btRight :: BiTree a } -- (BiTree a) a (BiTree a) 
               deriving (Show, Eq)
 
 instance Functor BiTree where
@@ -136,7 +138,9 @@ instance Functor ZTree where
   fmap f (ZTree t c) = ZTree (fmap f t) (fmap f c)
 
 ztLeft   (ZTree (BiNode l v r) c)   = ZTree l (L v c r)
+ztLeft   zt                         = zt
 ztRight  (ZTree (BiNode l v r) c)   = ZTree r (R l v c)
+ztRight  zt                         = zt
 
 qtLeft   (BiNode l v r, c)   = ( l, L v c r )
 qtRight  (BiNode l v r, c)   = ( r, R l v c )
