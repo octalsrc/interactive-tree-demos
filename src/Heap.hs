@@ -15,26 +15,45 @@ import Super.Canvas
 import Super.Trees
 import Super.Trees2
 
-main = startCanvas "main" 
-                   (900,500) 
-                   "background: lightgray;"
-                   ["main","message","frame","defbuttons"]
-                   (\_ -> return ())
-       >>= startHeapGame
+data Config = Config { useAnimations :: Bool
+                     , ordDirection :: Bool
+                     , defaultTreeSize :: Int
+                     , treeSizeInputID :: String
+                     , newGameButtonID :: String
+                     , freezeFrameDelay :: Int
+                     , animationFrameDelay :: Int }
+
+main = do let n = "main"
+              s = "background: lightgray;"
+          conf <- Config
+                  <$> option n "use-animations" True
+                  <*> option n "ord-direction" True
+                  <*> option n "default-tree-size" 8
+                  <*> option n "tree-size-input-id" "numnodes"
+                  <*> option n "new-game-button-id" "restart"
+                  <*> option n "freeze-frame-delay" 1000
+                  <*> option n "animation-frame-delay" 100
+          sc <- startCanvas n
+                            (900,500) 
+                            s
+                            ["main","message","frame","defbuttons"]
+                            (const (return ()))
+          startHeapGame (sc,conf)
 
 type StateModifier = GameState -> Writer [IO ()] GameState
 
 data Env = Env { sc :: SuperCanvas
+               , conf :: Config
                , runM :: StateModifier -> IO () }
 
 nodesize = (30,40)
 
 
-startHeapGame :: SuperCanvas -> IO ()
-startHeapGame sc = 
+startHeapGame :: (SuperCanvas,Config) -> IO ()
+startHeapGame (sc,conf) = 
   do g <- newStdGen
      (gameManips,runManip) <- newAddHandler
-     let env = Env sc runManip
+     let env = Env sc conf runManip
      attachButton "restart" (restartGame env <$> readNewGame env) runManip
      initialGame <- readNewGame env
      compile (heapGame env
@@ -71,17 +90,21 @@ update :: StateModifier -> (GameState,[IO ()]) -> (GameState,[IO ()])
 update m (gs,_) = runWriter (m gs)
 
 visualize :: DrawableNode (QNode a b) 
-          => Env -> Int -> Int -> VTrace a b -> IO ()
-visualize _ _ _ [] = return ()
-visualize env d finald vt = 
+          => Env -> Int -> Int -> String -> VTrace a b -> IO ()
+visualize _ _ _ _ [] = return ()
+visualize env d finald str vt = 
   let w i = animateS (sc env) "main" 1 i
             . fitTreeArea env
             . toForm nodesize zFindLoc nodeForm
             . zTree
             . ztUpMost
+      -- str = "Validating..."
   in dumbButtons env
-     >> (sequence_ . fmap (w d)) vt
-     >> w finald (L.last vt)
+     >> if (useAnimations . conf) env
+           then (sequence_ . fmap (w d)) vt
+                >> messageHold env White (d * length vt) str
+                >> w finald (L.last vt)
+           else w finald (L.last vt)
 
 --   >> (sequence_ . fmap (animateS (sc env) "main" 1 d
 --                         . fitTreeArea env
@@ -151,6 +174,12 @@ message env col = writeS (sc env) "message"
                   . fitMessageArea env 
                   . messageForm col
 
+messageHold :: Env -> Color -> Int -> String -> IO ()
+messageHold env col del str = 
+  animateS (sc env) "message" 1 del (fitMessageArea 
+                                       env (messageForm 
+                                              col str))
+
 normalNodeForm (ZTree (BiNode _ n _) _) = nodeForm n
 normalNodeForm _ = (blank, const blank)
 
@@ -207,13 +236,14 @@ modValidateValid env validator et =
       state = case tree of
                 Just h -> Valid h
                 _ -> GameOver
-  in tell [(visualize env 100 1000 trace)] 
+  in tell [(visualize env 100 1000 "Validating heap..." trace)] 
      >> tell [(writeState env state)]
      >> return state
 
 modRemoveMin :: Env -> StateModifier
 modRemoveMin env (Valid h) = 
-  tell [visualize env 0 1000 pre, writeState env state] >> return state
+  tell [ visualize env 0 1000 "Removing element at head of heap..." pre
+       , writeState env state] >> return state
   where state = RemoveMin (removeMin h)
         pre = [preRemove h]
 modRemoveMin _ s = return s
