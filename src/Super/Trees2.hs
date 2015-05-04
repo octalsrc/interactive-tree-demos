@@ -48,23 +48,25 @@ lastElem (Heap t) = recr (zTop t)
                  else (recr . ztLeft) (ZTree t c)
             _ -> ztUp (ZTree t c)
 
-upHeap :: EditTree a -> EditTree a
-upHeap (EditTree (ZTree (BiNode l v r) c)) = 
+upHeap :: (a -> a) -> EditTree a -> EditTree a
+upHeap mark (EditTree (ZTree (BiNode l v r) c)) = 
   case c of
-    L u k p -> (EditTree . ztUp) (ZTree (BiNode l u r) (L v k p))
-    R s u k -> (EditTree . ztUp) (ZTree (BiNode l u r) (R s v k))
+    L u k p -> (EditTree . ztUp) 
+                 (ZTree (BiNode l (mark u) r) (L v k p))
+    R s u k -> (EditTree . ztUp) 
+                 (ZTree (BiNode l (mark u) r) (R s v k))
     Top -> EditTree (ZTree (BiNode l v r) Top)
-upHeap et = et -- Nothing happens if you try to upHeap an EmptyTree
+upHeap _ et = et -- Nothing happens if you try to upHeap an EmptyTree
 
-downHeapL :: EditTree a -> EditTree a
-downHeapL (EditTree (ZTree (BiNode (BiNode l u p) v r) c)) = 
-  (EditTree . ztLeft) (ZTree (BiNode (BiNode l v p) u r) c)
-downHeapL et = et
+downHeapL :: (a -> a) -> EditTree a -> EditTree a
+downHeapL mark (EditTree (ZTree (BiNode (BiNode l u p) v r) c)) = 
+  (EditTree . ztLeft) (ZTree (BiNode (BiNode l v p) (mark u) r) c)
+downHeapL _ et = et
 
-downHeapR :: EditTree a -> EditTree a
-downHeapR (EditTree (ZTree (BiNode l v (BiNode s u r)) c)) = 
-  (EditTree . ztRight) (ZTree (BiNode l u (BiNode s v r)) c)
-downHeapR et = et
+downHeapR :: (a -> a) -> EditTree a -> EditTree a
+downHeapR mark (EditTree (ZTree (BiNode l v (BiNode s u r)) c)) = 
+  (EditTree . ztRight) (ZTree (BiNode l (mark u) (BiNode s v r)) c)
+downHeapR _ et = et
 
 type NodeForm a = (ZTree a -> (SuperForm, LineForm))
 

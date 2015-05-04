@@ -189,13 +189,14 @@ normalNodeForm _ = (blank, const blank)
 rmNodeForm :: Env -> NodeForm (QNode HeapNode Focus)
 rmNodeForm env zt = 
   let (form,line) = nodeForm zt
+      m = setQ OnPath
   in case zt of
        ZTree _ (L (QNode _ Focused) _ _) -> 
-         (combine [addOnClick [(runM env) (modSwap env downHeapL)] form
+         (combine [addOnClick [(runM env) (modSwap env (downHeapL m))] form
                   ,highlight env]
          ,line)
        ZTree _ (R _ (QNode _ Focused) _) -> 
-         (combine [addOnClick [(runM env) (modSwap env downHeapR)] form
+         (combine [addOnClick [(runM env) (modSwap env (downHeapR m))] form
                   ,highlight env]
          ,line)
        _ -> (form,line)
@@ -203,13 +204,14 @@ rmNodeForm env zt =
 insNodeForm :: Env -> NodeForm (QNode HeapNode Focus)
 insNodeForm env zt = 
   let (form,line) = nodeForm zt
+      m = setQ OnPath
   in case zt of
        ZTree (BiNode (BiNode _ (QNode _ Focused) _) _ _) _ -> 
-         (combine [addOnClick [(runM env) (modSwap env upHeap)] form
+         (combine [addOnClick [(runM env) (modSwap env (upHeap m))] form
                   ,highlight env]
          ,line)
        ZTree (BiNode _ _ (BiNode _ (QNode _ Focused) _)) _ -> 
-         (combine [addOnClick [(runM env) (modSwap env upHeap)] form
+         (combine [addOnClick [(runM env) (modSwap env (upHeap m))] form
                   ,highlight env]
          ,line)
        _ -> (form,line)
@@ -342,7 +344,7 @@ makeQ q a = QNode a q
 carelessInsert :: Ord a => a -> Heap a -> EditTree (QNode a Focus)
 carelessInsert a h = (EditTree 
                       . ztReplace (makeQ Focused a)
-                      . bottom' (makeQ Unfocused) (setQ OnPath)) h
+                      . bottom' (makeQ Unfocused) id) h
 
 removeMin :: Ord a => Heap a -> EditTree (QNode a Focus)
 removeMin (Heap EmptyTree) = EditTree (zTop EmptyTree)
