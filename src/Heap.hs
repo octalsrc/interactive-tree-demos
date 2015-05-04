@@ -18,6 +18,7 @@ import Super.Trees2
 data Config = Config { useAnimations :: Bool
                      , ordDirection :: Bool
                      , defaultTreeSize :: Int
+                     , maxInitTreeSize :: Int
                      , treeSizeInputID :: String
                      , newGameButtonID :: String
                      , freezeFrameDelay :: Int
@@ -29,6 +30,7 @@ main = do let n = "main"
                   <$> option n "use-animations" True
                   <*> option n "ord-direction" True
                   <*> option n "default-tree-size" 8
+                  <*> option n "maximum-starting-tree-size" 50
                   <*> option n "tree-size-input-id" "numnodes"
                   <*> option n "new-game-button-id" "restart"
                   <*> option n "freeze-frame-delay" 1000
@@ -72,13 +74,21 @@ restartGame env newGame _ = tell [writeState env newGame]
 
 readNewGame :: Env -> IO GameState
 readNewGame env = 
-  do num <- safeReadInput (treeSizeInputID (conf env)) 
-                          (defaultTreeSize (conf env))
+  do num <- boxRange (0, maxInitTreeSize (conf env)) 
+            <$> safeReadInput (treeSizeInputID (conf env)) 
+                              (defaultTreeSize (conf env))
      g <- newStdGen
      let nodes = take num (fmap HeapNode (randomRs randRange g))
          heap = foldr (insert (ordDirection (conf env))) newHeap nodes
      changeInput (treeSizeInputID (conf env)) (show num)
      return (Valid heap)
+     
+boxRange :: Ord a => (a,a) -> a -> a
+boxRange (min,max) val = if val < min
+                            then min
+                            else if val > max
+                                    then max
+                                    else val
 
 heapGame env iGame gameMs runM = 
   do eGameMs <- fromAddHandler gameMs
@@ -248,6 +258,15 @@ modValidateValid env validator et =
      >> return state
 
 modRemoveMin :: Env -> StateModifier
+modRemoveMin env (Valid (Heap EmptyTree)) = 
+  tell [ visualize env 0 frDel "There are no elements to remove!" empty
+       , writeState env state ] >> return state
+  where frDel = freezeFrameDelay (conf env)
+        empty = [ZTree (EmptyTree :: BiTree (QNode HeapNode Status)) Top]
+        state = (Valid (Heap EmptyTree))
+modRemoveMin env (Valid (Heap (BiNode EmptyTree _ EmptyTree))) =
+  tell [writeState env state] >> return state
+  where state = Valid (Heap EmptyTree)
 modRemoveMin env (Valid h) = 
   tell [ visualize env 0 frDel "Removing element at head of heap..." pre
        , writeState env state] >> return state
@@ -553,8 +572,8 @@ validateRemoveM env (EditTree t) =
       let (res,trace) = runWriter (runMaybeT (checkAround env nt))
       in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
     _ -> (Just (Heap EmptyTree), [])
-  where nt = fmap (setQ Unchecked) t
-  
+  where nt = fmap (path2Interest) t
+
 checkAround :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
 checkAround env zt = case zt of
                        ZTree (BiNode _ v _) Top -> 
