@@ -556,13 +556,17 @@ validateRemoveM env (EditTree t) =
 checkAround :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
 checkAround env zt = case zt of
                        ZTree (BiNode _ v _) Top -> 
-                         evalTree v (ztLeft zt) 
-                         >> evalTree v (ztRight zt) 
-                         >> markValid' zt
+                         do evalTree v (ztLeft zt)
+                            zt2 <- ztUp <$> markValid' (ztLeft zt)
+                            evalTree v (ztRight zt2) 
+                            zt3 <- ztUp <$> markValid' (ztRight zt2)
+                            markValid' zt3
                        ZTree (BiNode _ v _) _ -> 
-                         evalTree v (ztLeft zt)
-                         >> evalTree v (ztRight zt)
-                         >> markValid' zt >>= (checkAround env . ztUp)
+                         do evalTree v (ztLeft zt)
+                            zt2 <- ztUp <$> markValid' (ztLeft zt)
+                            evalTree v (ztRight zt2)
+                            zt3 <- ztUp <$> markValid' (ztRight zt2)
+                            markValid' zt3 >>= (checkAround env . ztUp)
   where evalTree u (ZTree EmptyTree _) = return ()
         evalTree u (ZTree (BiNode l v r) c) 
           = if compare' u v

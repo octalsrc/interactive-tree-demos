@@ -11,5 +11,57 @@
     </div> 
 
     <div id="sc-main-div"></div>
+
+    <div id="sc-main-config" style="visibility: hidden;">
+
+      <!-- CONFIGURATION SECTION
+           =====================
+
+           Each ID should be the configuration
+           option's name with "sc-main-option-" 
+           prepended to it. 
+           
+           Note: None of these options are necessary.  If they
+                 are not specified in this html document, the
+                 hardcoded defaults from the Haskell source-code
+                 will be used. (also, unless this becomes out-of-date,
+                 all the option defaults here are the same as the 
+                 defaults from the Haskell source-code) -->
+
+      <div id="sc-main-option-default-tree-size"
+	   >8</div>
+
+      <!-- True|False :: True indicates that the heap should have the
+                         smallest elements at the top, and False indicates
+                         that the heap should have the largest elements
+                         at the top -->
+      <div id="sc-main-option-ord-direction"
+	   >True</div>
+
+      <!-- True|False :: Specifies whether or not to animate the 
+                         validation process -->
+      <div id="sc-main-option-use-animations"
+	   >True</div>
+
+      <!-- Integer :: The amount of time to hang on freeze-frame moments,
+                      such as the validation results and the highlighting
+                      of the node which is to be moved to the top of the
+                      heap during a remove-min (in milliseconds) -->
+      <div id="sc-main-option-freeze-frame-delay"
+	   >1000</div>
+
+      <!-- Integer :: The number of milliseconds to pause between each
+                      animation frame during validation -->
+      <div id="sc-main-option-animation-frame-delay"
+	   >100</div>
+
+      <!-- "String" :: The id of the tree size input on this html page. 
+                       Quotes are necessary! -->
+      <div id="sc-main-option-tree-size-input-id"
+	   >"numnodes"</div>
+
+      <div id="sc-main-option-new-game-button-id"
+	   >"restart"</div>
+
   </body>
 </html>
