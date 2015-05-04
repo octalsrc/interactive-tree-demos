@@ -9,6 +9,7 @@ import Data.Monoid
 import Text.Read (readMaybe)
 import System.Random
 import qualified Data.Map as M
+import qualified Data.List as L
 
 import Super.Canvas
 import Super.Trees
@@ -70,14 +71,24 @@ update :: StateModifier -> (GameState,[IO ()]) -> (GameState,[IO ()])
 update m (gs,_) = runWriter (m gs)
 
 visualize :: DrawableNode (QNode a b) 
-          => Env -> Int -> VTrace a b -> IO ()
-visualize env d vt = 
-  dumbButtons env
-  >> (sequence_ . fmap (animateS (sc env) "main" 1 d
-                        . fitTreeArea env
-                        . toForm nodesize zFindLoc nodeForm 
-                        . zTree
-                        . ztUpMost)) vt
+          => Env -> Int -> Int -> VTrace a b -> IO ()
+visualize _ _ _ [] = return ()
+visualize env d finald vt = 
+  let w i = animateS (sc env) "main" 1 i
+            . fitTreeArea env
+            . toForm nodesize zFindLoc nodeForm
+            . zTree
+            . ztUpMost
+  in dumbButtons env
+     >> (sequence_ . fmap (w d)) vt
+     >> w finald (L.last vt)
+
+--   >> (sequence_ . fmap (animateS (sc env) "main" 1 d
+--                         . fitTreeArea env
+--                         . toForm nodesize zFindLoc nodeForm 
+--                         . zTree
+--                         . ztUpMost)) vt
+--   >> animateS (sc env) "main" 1 finald 
 
 writeState :: Env -> GameState -> IO ()
 writeState env (Valid (Heap t)) = 
@@ -183,25 +194,26 @@ modSwap env mod (InsertNew et) =
 modSwap _ _ s = return s
 
 modValidate :: Env -> StateModifier
-modValidate env (RemoveMin et) = modValidateValid env et
-modValidate env (InsertNew et) = modValidateValid env et
+modValidate env (RemoveMin et) = modValidateValid env validateRemoveM et
+modValidate env (InsertNew et) = modValidateValid env validateInsertM et
 modValidate _ s = return s
 
-modValidateValid :: Env 
+modValidateValid :: Env
+                 -> ValidateM HeapNode
                  -> EditTree (QNode HeapNode Focus) 
                  -> Writer [IO ()] GameState
-modValidateValid env et = 
-  let (tree,trace) = validateM et
+modValidateValid env validator et = 
+  let (tree,trace) = validator et
       state = case tree of
                 Just h -> Valid h
                 _ -> GameOver
-  in tell [(visualize env 70 trace)] 
+  in tell [(visualize env 100 1000 trace)] 
      >> tell [(writeState env state)]
      >> return state
 
 modRemoveMin :: Env -> StateModifier
 modRemoveMin env (Valid h) = 
-  tell [visualize env 1500 pre, writeState env state] >> return state
+  tell [visualize env 0 1000 pre, writeState env state] >> return state
   where state = RemoveMin (removeMin h)
         pre = [preRemove h]
 modRemoveMin _ s = return s
@@ -245,6 +257,8 @@ instance DrawableNode (QNode HeapNode Focus) where
 
 instance DrawableNode (QNode HeapNode Status) where
   nodeForm (QNode h Unchecked) = nodeForm (QNode h Unfocused)
+  nodeForm (QNode h OfInterest) = nodeForm (QNode h OnPath)
+  nodeForm (QNode h Marker) = nodeForm (QNode h Focused)
   nodeForm (QNode h Good) = 
     let (f,_) = qForm h LightGreen
         l = (\ploc -> line (0,0) ploc 4 Green)
@@ -276,7 +290,12 @@ instance (Eq a, Ord a) => Ord (QNode a s) where
 
 data Focus = Focused | Unfocused | OnPath deriving (Show)
 
-data Status = Unchecked | Good | BadChild | BadParent deriving (Show)
+data Status = Unchecked
+            | OfInterest
+            | Marker
+            | Good 
+            | BadChild 
+            | BadParent deriving (Show)
 
 setQ :: q -> QNode a s -> QNode a q
 setQ q (QNode n _) = QNode n q
@@ -401,9 +420,10 @@ type Validator a = MaybeT (Writer (VTrace a Status))
 
 type VTrace a b = [ZTree (QNode a b)]
 
-validateM :: Ord a 
-          => (EditTree (QNode a s)) 
-          -> (Maybe (Heap a), VTrace a Status)
+-- validateM :: Ord a 
+--           => (EditTree (QNode a s)) 
+--           -> (Maybe (Heap a), VTrace a Status)
+validateM :: Ord a => ValidateM a
 validateM (EditTree t) = 
   case nt of
     (ZTree (BiNode _ _ _) _) -> 
@@ -443,3 +463,74 @@ markFail zt = let nxt = (stamp BadParent
                          . ztUp 
                          . stamp BadChild) zt
               in tell [nxt] >> fail "Invalid Heap"
+
+type ValidateM a = (EditTree (QNode a Focus)) -> (Maybe (Heap a), VTrace a Status)
+
+-- validateInsertM :: Ord a 
+--                 => (EditTree (QNode a Focus))
+--                 -> (Maybe (Heap a), VTrace a Status)
+validateInsertM :: Ord a => ValidateM a
+validateInsertM (EditTree t) = 
+  case nt of
+    ZTree (BiNode _ _ _) _ -> 
+      let (res,trace) = runWriter (runMaybeT (checkUp nt))
+      in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
+    _ -> (Just (Heap EmptyTree), [])
+  where nt = (fmap path2Interest . lastElem . Heap . zTree . ztUpMost) t
+
+path2Interest :: QNode a Focus -> QNode a Status
+path2Interest (QNode n Focused) = QNode n Marker
+path2Interest (QNode n OnPath) = QNode n OfInterest
+path2Interest (QNode n _) = QNode n Unchecked
+
+checkUp :: Ord a => ZTree (QNode a Status) -> Validator a
+checkUp zt = case zt of 
+               ZTree (BiNode _ (QNode v OfInterest) _) (L u _ _) -> 
+                 evalNodes (QNode v OfInterest) u >>= (checkUp . ztUp)
+               ZTree (BiNode _ (QNode v OfInterest) _) (R _ u _) -> 
+                 evalNodes (QNode v OfInterest) u >>= (checkUp . ztUp)
+               ZTree (BiNode _ (QNode v Marker) _) (L u _ _) -> 
+                 evalNodes (QNode v Marker) u
+               ZTree (BiNode _ (QNode v Marker) _) (R _ u _) -> 
+                 evalNodes (QNode v Marker) u
+               _ -> return zt
+  where evalNodes v u = if u <= v
+                           then markValid' zt
+                           else markFail' zt
+        markValid' zt = let nxt = stamp Good zt
+                        in tell [nxt] >> return nxt
+        markFail' zt = let nxt = (stamp BadParent
+                                  . ztUp
+                                  . stamp BadChild) zt
+                       in tell [nxt] >> fail "Invalid Heap"
+
+validateRemoveM :: Ord a => ValidateM a
+validateRemoveM (EditTree t) = 
+  case nt of
+    ZTree (BiNode _ _ _) _ -> 
+      let (res,trace) = runWriter (runMaybeT (checkAround nt))
+      in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
+    _ -> (Just (Heap EmptyTree), [])
+  where nt = fmap (setQ Unchecked) t
+  
+checkAround :: Ord a => ZTree (QNode a Status) -> Validator a
+checkAround zt = case zt of
+                   ZTree (BiNode _ v _) Top -> 
+                     evalTree v (ztLeft zt) 
+                     >> evalTree v (ztRight zt) 
+                     >> markValid' zt
+                   ZTree (BiNode _ v _) _ -> 
+                     evalTree v (ztLeft zt)
+                     >> evalTree v (ztRight zt)
+                     >> markValid' zt >>= (checkAround . ztUp)
+  where evalTree u (ZTree EmptyTree _) = return ()
+        evalTree u (ZTree (BiNode l v r) c) 
+          = if u <= v
+               then return ()
+               else markFail' (ZTree (BiNode l v r) c)
+        markValid' zt = let nxt = stamp Good zt
+                        in tell [nxt] >> return nxt
+        markFail' zt = let nxt = (stamp BadParent
+                                  . ztUp
+                                  . stamp BadChild) zt
+                       in tell [nxt] >> fail "Invalid Heap"
