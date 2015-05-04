@@ -54,7 +54,8 @@ startHeapGame (sc,conf) =
   do g <- newStdGen
      (gameManips,runManip) <- newAddHandler
      let env = Env sc conf runManip
-     attachButton "restart" (restartGame env <$> readNewGame env) runManip
+     attachButton (newGameButtonID conf) 
+                  (restartGame env <$> readNewGame env) runManip
      initialGame <- readNewGame env
      compile (heapGame env
                        (initialGame, [writeState env initialGame])
@@ -71,10 +72,12 @@ restartGame env newGame _ = tell [writeState env newGame]
 
 readNewGame :: Env -> IO GameState
 readNewGame env = 
-  do num <- safeReadInput "numnodes" 8 
+  do num <- safeReadInput (treeSizeInputID (conf env)) 
+                          (defaultTreeSize (conf env))
      g <- newStdGen
      let nodes = take num (fmap HeapNode (randomRs randRange g))
          heap = foldr (insert (ordDirection (conf env))) newHeap nodes
+     changeInput (treeSizeInputID (conf env)) (show num)
      return (Valid heap)
 
 heapGame env iGame gameMs runM = 
@@ -236,16 +239,19 @@ modValidateValid env validator et =
       state = case tree of
                 Just h -> Valid h
                 _ -> GameOver
-  in tell [(visualize env 100 1000 "Validating heap..." trace)] 
+      frDel = freezeFrameDelay (conf env)
+      anDel = animationFrameDelay (conf env)
+  in tell [(visualize env anDel frDel "Validating heap..." trace)] 
      >> tell [(writeState env state)]
      >> return state
 
 modRemoveMin :: Env -> StateModifier
 modRemoveMin env (Valid h) = 
-  tell [ visualize env 0 1000 "Removing element at head of heap..." pre
+  tell [ visualize env 0 frDel "Removing element at head of heap..." pre
        , writeState env state] >> return state
   where state = RemoveMin (removeMin h)
         pre = [preRemove h]
+        frDel = freezeFrameDelay (conf env)
 modRemoveMin _ s = return s
 
 modInsertNew :: Env -> HeapNode -> StateModifier
