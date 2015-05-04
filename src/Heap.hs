@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
 
 import Reactive.Banana
 import Reactive.Banana.Frameworks
@@ -69,12 +69,15 @@ heapGame env iGame gameMs runM =
 update :: StateModifier -> (GameState,[IO ()]) -> (GameState,[IO ()])
 update m (gs,_) = runWriter (m gs)
 
-visualize :: Env -> VTrace HeapNode -> IO ()
-visualize env = sequence_ . fmap (animateS (sc env) "main" 1 70
-                                  . fitTreeArea env
-                                  . toForm nodesize zFindLoc nodeForm 
-                                  . zTree
-                                  . ztUpMost)
+visualize :: DrawableNode (QNode a b) 
+          => Env -> Int -> VTrace a b -> IO ()
+visualize env d vt = 
+  dumbButtons env
+  >> (sequence_ . fmap (animateS (sc env) "main" 1 d
+                        . fitTreeArea env
+                        . toForm nodesize zFindLoc nodeForm 
+                        . zTree
+                        . ztUpMost)) vt
 
 writeState :: Env -> GameState -> IO ()
 writeState env (Valid (Heap t)) = 
@@ -98,10 +101,16 @@ writeState env (InsertNew (EditTree t)) =
   writeEditState env t (insNodeForm env)
 writeState env (GameOver) = 
   message env LightRed "Invalid heap! Violations are marked in red."
-  >> writeS (sc env) 
-            "defbuttons" 
-            (combine [fitControl1 env (buttonForm "" Gray)
-                     ,fitControl2 env (buttonForm "" Gray)])
+  >> dumbButtons env
+
+dumbButtons :: Env -> IO ()
+dumbButtons env = 
+  writeS (sc env) 
+         "defbuttons" 
+         (combine [fitControl1 env (buttonForm "" Gray)
+                  ,fitControl2 env (buttonForm "" Gray)])
+
+clearDumbButtons env = writeS (sc env) "defbuttons" blank
 
 messageForm :: Color -> String -> SuperForm
 messageForm col str = combine [rekt (0,0) (500,30) True col
@@ -186,14 +195,15 @@ modValidateValid env et =
       state = case tree of
                 Just h -> Valid h
                 _ -> GameOver
-  in tell [(visualize env trace)] 
+  in tell [(visualize env 70 trace)] 
      >> tell [(writeState env state)]
      >> return state
 
 modRemoveMin :: Env -> StateModifier
 modRemoveMin env (Valid h) = 
-  tell [writeState env state] >> return state
+  tell [visualize env 1500 pre, writeState env state] >> return state
   where state = RemoveMin (removeMin h)
+        pre = [preRemove h]
 modRemoveMin _ s = return s
 
 modInsertNew :: Env -> HeapNode -> StateModifier
@@ -229,7 +239,8 @@ data QNode a s = QNode { qVal :: a
                        , qStatus :: s } deriving (Show)
 
 instance DrawableNode (QNode HeapNode Focus) where
-  nodeForm (QNode h Focused) = qForm h LightYellow
+  nodeForm (QNode h Focused) = qForm h Orange
+  nodeForm (QNode h OnPath) = qForm h LightYellow
   nodeForm (QNode h Unfocused) = qForm h White
 
 instance DrawableNode (QNode HeapNode Status) where
@@ -251,7 +262,11 @@ qForm h c = let (t,line) = nodeForm h
             in (combine [r,o,t], line) 
 
 highlight :: Env -> SuperForm
-highlight env = circle (0,0) (3.2 * snd nodesize) False LightYellow
+highlight env = combine [circle (-143,-100) 48 True Orange
+                        -- ,circle (-143,-100) 41 False Orange
+                        -- ,circle (-143,-100) 40 False Orange
+                        -- ,circle (-143,-100) 39 False Orange
+                        ]
 
 instance Eq a => Eq (QNode a s) where
   (==) (QNode a _) (QNode b _) = a == b
@@ -259,7 +274,7 @@ instance Eq a => Eq (QNode a s) where
 instance (Eq a, Ord a) => Ord (QNode a s) where
   compare (QNode a _) (QNode b _) = compare a b
 
-data Focus = Focused | Unfocused deriving (Show)
+data Focus = Focused | Unfocused | OnPath deriving (Show)
 
 data Status = Unchecked | Good | BadChild | BadParent deriving (Show)
 
@@ -272,8 +287,7 @@ makeQ q a = QNode a q
 carelessInsert :: Ord a => a -> Heap a -> EditTree (QNode a Focus)
 carelessInsert a h = (EditTree 
                       . ztReplace (makeQ Focused a)
-                      . fmap (makeQ Unfocused)
-                      . bottom) h
+                      . bottom' (makeQ Unfocused) (setQ OnPath)) h
 
 removeMin :: Ord a => Heap a -> EditTree (QNode a Focus)
 removeMin (Heap EmptyTree) = EditTree (zTop EmptyTree)
@@ -283,6 +297,10 @@ removeMin h = (EditTree
                . ztCut) (ZTree b c)
   where (ZTree b c) = (fmap (makeQ Unfocused) . lastElem) h
         (BiNode _ v _) = b
+
+preRemove :: Ord a => Heap a -> ZTree (QNode a Focus)
+-- preRemove (Heap EmptyTree) = ZTree (zTop EmptyTree)
+preRemove = (ztModify (setQ Focused) . fmap (makeQ Unfocused) . lastElem)
 
 data HeapGame = HeapGame { hgScore :: Int
                          , hgState :: GameState } deriving (Show)
@@ -378,14 +396,14 @@ stamp s (ZTree (BiNode l (QNode v _) r) c) =
   ZTree (BiNode l (QNode v s) r) c
 stamp _ t = t
 
-type Validator a = MaybeT (Writer (VTrace a)) 
+type Validator a = MaybeT (Writer (VTrace a Status)) 
                           (ZTree (QNode a Status))
 
-type VTrace a = [ZTree (QNode a Status)]
+type VTrace a b = [ZTree (QNode a b)]
 
 validateM :: Ord a 
           => (EditTree (QNode a s)) 
-          -> (Maybe (Heap a), VTrace a)
+          -> (Maybe (Heap a), VTrace a Status)
 validateM (EditTree t) = 
   case nt of
     (ZTree (BiNode _ _ _) _) -> 

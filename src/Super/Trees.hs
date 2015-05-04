@@ -29,6 +29,7 @@ module Super.Trees ( BiTree (..)
                    , ztUpMost
                    , ztCut
                    , ztReplace
+                   , ztModify
 
                    , depth
                    , shallow
@@ -163,6 +164,10 @@ qtUpMost :: QualTree a -> QualTree a
 qtUpMost (t, L v c r) = qtUpMost (BiNode t v r, c)
 qtUpMost (t, R l v c) = qtUpMost (BiNode l v t, c)
 qtUpMost (t, Top)     = (t, Top)
+
+ztModify :: (a -> a) -> ZTree a -> ZTree a
+ztModify f (ZTree (BiNode l v r) c) = ZTree (BiNode l (f v) r) c
+ztModify _ zt = zt
 
 ztReplace :: a -> ZTree a -> ZTree a
 ztReplace v (ZTree (BiNode l _ r) c) = ZTree (BiNode l v r) c

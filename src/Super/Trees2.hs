@@ -21,16 +21,19 @@ insert a (Heap t) = Heap (i a t)
         i a EmptyTree = leaf a
 
 
-bottom :: Ord a => Heap a -> ZTree a
-bottom (Heap EmptyTree) = zTop EmptyTree
-bottom (Heap t) = recr (zTop t)
+bottom' :: Ord a => (a -> b) -> (b -> b) -> Heap a -> ZTree b
+bottom' m f (Heap EmptyTree) = (fmap m . zTop) EmptyTree
+bottom' m f (Heap t) = recr (fmap m (zTop t))
   where recr (ZTree t c) = 
           case t of
             BiNode l _ r -> 
               if shallow l > shallow r
-                 then (recr . ztRight) (ZTree t c)
-                 else (recr . ztLeft) (ZTree t c)
-            _ -> ZTree t c
+                 then (recr . ztRight . ztModify f) (ZTree t c)
+                 else (recr . ztLeft . ztModify f) (ZTree t c)
+            _ -> ztModify f (ZTree t c)
+
+bottom :: Ord a => Heap a -> ZTree a
+bottom h = bottom' id id h
 
 lastElem :: Ord a => Heap a -> ZTree a
 lastElem (Heap t) = recr (zTop t)
