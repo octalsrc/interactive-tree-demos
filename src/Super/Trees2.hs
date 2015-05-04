@@ -10,15 +10,18 @@ data Ord a => Heap a = Heap { hTree :: (BiTree a) } deriving Show
 newHeap :: Ord a => Heap a
 newHeap = Heap EmptyTree
 
-insert :: Ord a => a -> Heap a -> Heap a
-insert a (Heap t) = Heap (i a t)
+insert :: Ord a => Bool -> a -> Heap a -> Heap a
+insert b a (Heap t) = Heap (i a t)
   where i a (BiNode l v r) = 
-          if a < v
+          if compare' a v
              then i v (BiNode l a r)
              else if shallow l > shallow r
                      then BiNode l v (i a r)
                      else BiNode (i a l) v r
         i a EmptyTree = leaf a
+        compare' = if b
+                      then (<)
+                      else (>=)
 
 
 bottom' :: Ord a => (a -> b) -> (b -> b) -> Heap a -> ZTree b
