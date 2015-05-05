@@ -207,10 +207,10 @@ rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)
 
 rformat :: Env -> Int -> SuperForm
 rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
-                            message = if gameMode conf
-                                         then timestring t
-                                         else "\x221E"
-                        in fitTime (infoTab "-- Time --" message)
+                            message = timestring t
+                        in if gameMode conf
+                              then fitTime (infoTab "-- Time --" message) 
+                              else blank
 
 infoTab :: String -> String -> SuperForm
 infoTab name info = combine [rekt (0,0) (200,90) False Black
