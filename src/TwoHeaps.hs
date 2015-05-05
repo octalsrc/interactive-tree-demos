@@ -140,7 +140,8 @@ modValidate env (Construction n zt) =
 data Env = Env { sc :: SuperCanvas
                , conf :: Config
                , runM :: StateModifier -> IO ()
-               , modFreeNext :: Env -> StateModifier }
+               , modFreeNext :: Env -> StateModifier
+               , getNodeForm :: Env -> NodeForm (QNode HeapNode NodeStatus) }
 
 nodesize = (30,40)
 
@@ -151,8 +152,8 @@ startHeapGames (scUp,scDown,conf) =
      (gameManipsU,runManipU) <- newAddHandler
      (gameManipsD,runManipD) <- newAddHandler
      let runManip a = runManipU a >> runManipD a
-         envUp = Env scUp conf runManipU freeNextNodeUp
-         envDown = Env scDown conf runManipD freeNextNodeDown
+         envUp = Env scUp conf runManipU freeNextNodeUp upNodeForm
+         envDown = Env scDown conf runManipD freeNextNodeDown downNodeForm
      attachButton (newGameButtonID conf) 
                   (do g <- newStdGen
                       doNewGame envUp g
@@ -223,7 +224,7 @@ writeState :: Env -> GameState2 -> IO ()
 writeState env (Construction n zt) = 
   do let tree = fitTreeArea env (toForm nodesize
                                         zFindLoc
-                                        constructionNodeForm
+                                        ((getNodeForm env) env)
                                         (zTree (ztUpMost zt)))
          doFreeNext = (runM env) ((modFreeNext env) env)
          bFreeNext = (fitControl1 env . addOnClick [doFreeNext]) 
@@ -233,8 +234,6 @@ writeState env (Construction n zt) =
                        (buttonForm "Validate" Orange)
      (write (sc env) "main" . combine) [tree,bFreeNext,bValidate]
 writeState env (GameOver2 n b) = return ()
-
-constructionNodeForm = normalNodeForm
 
 -- writeState :: Env -> GameState -> IO ()
 -- writeState env (Valid (Heap t)) = 
