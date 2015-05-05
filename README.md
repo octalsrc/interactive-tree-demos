@@ -9,13 +9,13 @@ supervisor.
 
 The demos use [GHCJS](https://github.com/GHCJS/GHCJS) to compile to
 JavaScript for the browser, and use my intermediary graphics library
-**Hyper-Canvas** to, manage the graphics and layout (at this stage,
-Hyper-Canvas is in an early alpha stage and lives solely inside of
+*Hyper-Canvas* to, manage the graphics and layout (at this stage,
+*Hyper-Canvas* is in an early alpha stage and lives solely inside of
 this project).
 
 ## Try them out!
 
-I host the latest versions of these demos (and more?!)
+I host the latest versions of these demos (and more)
 [right here](http://octalsrc.net/demos).
 
 ## Build from source
@@ -23,15 +23,17 @@ I host the latest versions of these demos (and more?!)
 (The following assumes you are using a regular-ish Linux distribution)
 
 1. Make sure you have [GHCJS](https://github.com/GHCJS/GHCJS) and
-   ```cabal-install``` (with version >=1.22.2) in your path See the
-   GHCJS link for instructions on installing it (it's not that hard
-   anymore!).
+   ```cabal-install``` (with version >=1.22.2) in your path.  See the
+   [GHCJS](https://github.com/GHCJS/GHCJS) link for instructions on
+   installing it (it's not that hard anymore!).
 
 2. Clone this project and run ```make``` in the project directory.
 
 3. The HTML and JavaScript has hopefully been placed in ```www/```.
 
 ## Featuring...
+
+(Note: These may take a minute to load... please be patient!)
 
 ### [Tree Rotations](http://octalsrc.net/demos/rotate.html)
 
