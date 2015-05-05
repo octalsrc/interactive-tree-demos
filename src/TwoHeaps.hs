@@ -42,12 +42,12 @@ main = do let n = "main"
           scUp <- startCanvas "upheap-tree"
                               (900,300) 
                               s
-                              ["main","message","frame","defbuttons"]
+                              ["main","message","frame","defbuttons","score"]
                               (const (return ()))
           scDown <- startCanvas "downheap-tree"
                                 (900,300)
                                 s
-                                ["main","message","frame","defbuttons"]
+                                ["main","message","frame","defbuttons","score"]
                                 (const (return ()))
           startHeapGames (scUp,scDown,conf)
 
@@ -134,14 +134,18 @@ modValidate env (Construction n zt) =
       (m,trace) = validateM env et
   in tell [visualize env 100 1000 "Validating..." trace] 
      >> case m of
-          Just h -> return (GameOver2 n True)
-          _ -> return (GameOver2 n False)
+          Just h -> let state = GameOver2 n True
+                    in tell [writeState env state] >> return state
+          _ -> let state = GameOver2 n False
+               in tell [writeState env state] >> return state
 
 data Env = Env { sc :: SuperCanvas
                , conf :: Config
                , runM :: StateModifier -> IO ()
                , modFreeNext :: Env -> StateModifier
-               , getNodeForm :: Env -> NodeForm (QNode HeapNode NodeStatus) }
+               , getNodeForm :: Env -> NodeForm (QNode HeapNode NodeStatus)
+               , title :: String
+               , moveName :: String }
 
 nodesize = (30,40)
 
@@ -152,8 +156,20 @@ startHeapGames (scUp,scDown,conf) =
      (gameManipsU,runManipU) <- newAddHandler
      (gameManipsD,runManipD) <- newAddHandler
      let runManip a = runManipU a >> runManipD a
-         envUp = Env scUp conf runManipU freeNextNodeUp upNodeForm
-         envDown = Env scDown conf runManipD freeNextNodeDown downNodeForm
+         envUp = Env scUp 
+                     conf 
+                     runManipU 
+                     freeNextNodeUp 
+                     upNodeForm 
+                     ":: Upheap Construction ::"
+                     "Upheap"
+         envDown = Env scDown 
+                       conf 
+                       runManipD 
+                       freeNextNodeDown 
+                       downNodeForm
+                       ":: Downheap Construction ::"
+                       "Downheap"
      attachButton (newGameButtonID conf) 
                   (do g <- newStdGen
                       doNewGame envUp g
@@ -172,9 +188,9 @@ startGame env gameManips g =
                        gameManips
                        (runM env)) >>= actuate
      writeState env initialGame
-     writeS (sc env) "frame" frameForm
+     writeS (sc env) "frame" (combine [mkTitle env (title env), frameForm])
 
-frameForm = rekt (15,15) (870,270) False Black
+frameForm = rekt (15,15) (870,284) False Black
 
 restartGame :: Env -> GameState2 -> StateModifier
 restartGame env newGame _ = tell [writeState env newGame] 
@@ -233,7 +249,12 @@ writeState env (Construction n zt) =
          bValidate = (fitControl2 env . addOnClick [doValidate]) 
                        (buttonForm "Validate" Orange)
      (write (sc env) "main" . combine) [tree,bFreeNext,bValidate]
-writeState env (GameOver2 n b) = return ()
+     >> message env LightYellow "Construct the heap, moving one node at a time."
+     >> (writeS (sc env)) "score" (scoreBox env n)
+writeState env (GameOver2 n b) = 
+  if b
+     then message env LightGreen "The heap is valid."
+     else message env LightRed "Invalid heap! Violations are marked in red." 
 
 -- writeState :: Env -> GameState -> IO ()
 -- writeState env (Valid (Heap t)) = 
@@ -259,25 +280,6 @@ writeState env (GameOver2 n b) = return ()
 --   message env LightRed "Invalid heap! Violations are marked in red."
 --   >> dumbButtons env
 
-dumbButtons :: Env -> IO ()
-dumbButtons env = 
-  writeS (sc env) 
-         "defbuttons" 
-         (combine [fitControl1 env (buttonForm "" Gray)
-                  ,fitControl2 env (buttonForm "" Gray)])
-
-clearDumbButtons env = writeS (sc env) "defbuttons" blank
-
-messageForm :: Color -> String -> SuperForm
-messageForm col str = combine [rekt (0,0) (500,30) True col
-                              ,rekt (0,0) (500,30) False Black
-                              ,text (250,15) (490,15) str]
-
-buttonForm :: String -> Color -> SuperForm
-buttonForm str col = combine [rekt (1,1) (160,30) False Black
-                             ,rekt (0,0) (160,30) True col
-                             ,rekt (0,0) (160,30) False Black
-                             ,text (80,15) (155,17) str]
 
 modRemoveMin = undefined
 modInsertNew = undefined
@@ -375,17 +377,50 @@ upNodeForm env zt =
 --   where state = InsertNew (carelessInsert n h)
 -- modInsertNew _ _ s = return s
 -- 
+
+dumbButtons :: Env -> IO ()
+dumbButtons env = 
+  writeS (sc env) 
+         "defbuttons" 
+         (combine [fitControl1 env (buttonForm "" Gray)
+                  ,fitControl2 env (buttonForm "" Gray)])
+
+clearDumbButtons env = writeS (sc env) "defbuttons" blank
+
+messageForm :: Color -> String -> SuperForm
+messageForm col str = combine [rekt (0,0) (500,30) True col
+                              ,rekt (0,0) (500,30) False Black
+                              ,text (250,15) (490,15) str]
+
+buttonForm :: String -> Color -> SuperForm
+buttonForm str col = combine [rekt (1,1) (160,30) False Black
+                             ,rekt (0,0) (160,30) True col
+                             ,rekt (0,0) (160,30) False Black
+                             ,text (80,15) (155,17) str]
+
 fitTreeArea :: Env -> SuperForm -> SuperForm
 fitTreeArea env sf = let treeAreaX = 810
-                         ff = fit (45,120) (810,150) sf
+                         ff = fit (45,134) (810,150) sf
                          xv = (fst (snd (bounds ff))) / 2
                      in translate (treeAreaX / 2 - xv + 8,0) ff
 
+
+mkTitle :: Env -> String -> SuperForm
+mkTitle env s = translate (45,35) (combine [rekt (0,0) (315,30) True White
+                                           ,rekt (0,0) (315,30) False Black
+                                           ,text (157,15) (315,15) s])
+
+scoreBox :: Env -> Int -> SuperForm
+scoreBox env n = translate (600,75) (combine [rekt (0,0) (255,30) True White
+                                             ,rekt (0,0) (255,30) False Black
+                                             ,text (128,15) (255,15) s])
+  where s = (moveName env) ++ "s used: " ++ show n
+
 fitControl1 :: Env -> SuperForm -> SuperForm
-fitControl1 env = fit (45,35) (150,100)
+fitControl1 env = fit (45,75) (150,100)
 
 fitControl2 :: Env -> SuperForm -> SuperForm
-fitControl2 env = fit (210,35) (150,100)
+fitControl2 env = fit (210,75) (150,100)
 
 fitMessageArea :: Env -> SuperForm -> SuperForm
 fitMessageArea env = fit (375,35) (480,100)
