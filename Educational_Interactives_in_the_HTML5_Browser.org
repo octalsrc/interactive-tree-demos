@@ -1,0 +1,299 @@
+* Educational Interactives in the HTML5 Browser
+
+  Nick Lewchenko
+
+  2015 SLU Computer Science Capstone Project
+
+  Supervisor: Dr. Michael Goldwasser
+  
+* The Goal
+  
+  Re-implement a collection of CS teaching tools using modern HTML5
+  standards, to target modern web-browsers
+
+  - target tools written as Java applets, a deprecated technology
+    
+  - with HTML5 standards, JavaScript is just as capable as Java
+    applets and is much more widely supported
+  
+* Last Semester
+  
+  Target: A Gentle Introduction to Linked Lists
+  
+  - http://octalsrc.net/demos/linked_list.html
+
+** Language Choice
+
+   - JavaScript?
+     - dynamic typing
+     - multi-paradigm
+     - lots and lots of free libraries and community support
+     
+   - Elm? http://elm-lang.org
+     - graphical layouts and input management is very simple and clean
+     - purely functional, descendant of Haskell
+     - very new, appeared in 2012...
+     - and thus, tiny community and no ecosystem...
+     
+   - Haskell!
+     - strong type system
+     - purely functional
+     - lots and lots of free libraries and community support
+
+** GHCJS
+
+   - a modified backend to GHC that outputs JavaScript
+     
+   - aims to *fully* implement GHC for the browser
+     - All GHC-specific type-system extensions
+     - threading and STM
+     - profiling
+     - Cabal support
+       
+   - appeared in 2013, slated for official release later this year (?)
+     - http://weblog.luite.com/wordpress/?p=14
+       
+   - Free Software (MIT license), developed on GitHub
+     - https://github.com/ghcjs/ghcjs
+       
+   - The single thorn... large output files :(
+
+* This Semester
+
+  Target: Three Tree Demos
+  
+  - Transforming a Binary Tree via Rotations
+    - http://octalsrc.net/demos/rotate.html
+      
+  - Reinforcing Priority Queue Operations with a Binary Heap
+    - http://octalsrc.net/demos/heap.html
+      
+  - Construction of a Binary Tree
+    - http://octalsrc.net/demos/twoheaps.html
+
+* Implementation Details
+
+  All code is hosted on GitHub
+
+  - https://github.com/RoboNickBot/linked-list-web-demo
+    
+  - https://github.com/RoboNickBot/interactive-tree-demos
+
+** Notable Community Packages
+
+   - *GHCJS-JQuery*, *GHCJS-Canvas*
+     - all web-page manipulation and drawing
+     
+   - *Reactive-Banana*
+     - Functional Reactive Programming
+
+** Code Reuse
+
+   Almost nothing from the first-semester Linked List demo was
+   reusable...
+
+   This single pair of functions was reused, and had to be
+   copy-pasted:
+
+   #+BEGIN_SRC haskell
+     drawTextCenter :: Coord   -- location at which to center the text
+                    -> Double  -- maximum width of the text
+                    -> Double  -- maximum height of the text
+                    -> String  -- the text to be drawn
+                    -> Context -- the canvas context
+                    -> IO ()
+     drawTextCenter (x,y) maxW maxH s c =
+       do (a,b) <- setFont maxH maxW s c
+          fillText (pack s) (x - (a / 2)) (y + (b / 2)) c
+
+     -- same as drawTextCenter, but floors the text at the coordinates
+     drawTextFloor :: Coord -> Double -> Double -> String -> Context -> IO ()
+     drawTextFloor (x,y) maxW maxH s c =
+       do (a,_) <- setFont maxH maxW s c
+          fillText (pack s) (x - (a / 2)) y c
+
+     setFont :: Double -> Double -> String -> Context -> IO (Double, Double)
+     setFont maxHeight maxWidth s c = try maxWidth maxHeight s c
+
+     fontPrecision = 6 -- size of steps taken when choosing a font
+     panicSize = 1 -- size to choose if algorithm bottoms out
+     try d f s c = do font (pack ((show ((floor f)::Int)) ++ "pt Calibri")) c
+                      x <- measureText (pack s) c
+                      if x > d
+                         then if x > 0
+                                 then try d (f - fontPrecision) s c 
+                                 else return (panicSize,f)
+                         else return (x,f)
+   #+END_SRC
+
+*** *Hyper-Canvas*
+
+    - this semester, code reuse was a priority
+      
+    - *Hyper-Canvas* became a seperate library project living inside
+      the tree-demos project, accessable through an API
+
+    - manages canvas drawings and mouse interactions
+
+    - combine and transform "HyperForms", then (concurrently!) push
+      them into drawing queues (STM channels)
+
+    - needs a refactor of the API and documentation
+
+*** HTML Options Parsing
+    
+    - actually part of *Hyper-Canvas*, but should really be its own
+      small library
+      
+    - uses GHCJS-JQuery to read (Typed!) configuration options from
+      the DOM, substituting default values if it fails
+    
+    #+BEGIN_SRC haskell
+      data Config = Config { canvasWidth :: Double
+                           , canvasHeight :: Double
+                           , defaultTreeSize :: Int
+                           , maximumTreeSize :: Int
+                           , gameMode :: Bool
+                           , slowFrames :: Int
+                           , canvasStyle :: String
+                           , treeSizeInputID :: String
+                           , seedInputID :: String
+                           , newGameButtonID :: String
+                           , currentSeedID :: String }
+    #+END_SRC
+    
+    #+BEGIN_SRC haskell
+      prep :: IO (HyperCanvas, Config, AddHandler Double)
+      prep = do let n = "main"
+                    s = "background: lightgray;"
+                conf <- Config
+                        <$> option n "canvas-width" 900
+                        <*> option n "canvas-height" 500
+                        <*> option n "default-tree-size" 14
+                        <*> option n "maximum-tree-size" 99
+                        <*> option n "use-game-mode" True
+                        <*> option n "non-game-num-frames" 10
+                        <*> option n "canvas-style" s
+                        <*> option n "tree-size-input-id" "numnodes"
+                        <*> option n "seed-input-id" "seed"
+                        <*> option n "new-game-button-id" "newgame"
+                        <*> option n "current-seed-id" "currentseed"
+    #+END_SRC
+
+*** Tree Operations
+
+    - *lots* of tree manipulation and layout code also reused, but it's
+      not really a library yet...
+
+    - QTree, ZTree
+    
+    #+BEGIN_SRC haskell
+      type QualTree a = ( BiTree    a
+                        , BTContext a )
+
+      data ZTree a = ZTree { zTree    :: (BiTree    a)
+                           , zContext :: (BTContext a) } deriving Show
+                           
+      qtLeft   (BiNode l v r, c)          = ( l, L v c r )
+      qtRight  (BiNode l v r, c)          = ( r, R l v c )
+
+      ztLeft   (ZTree (BiNode l v r) c)   = ZTree l (L v c r)
+      ztRight  (ZTree (BiNode l v r) c)   = ZTree r (R l v c)
+    #+END_SRC
+
+** Interesting Bits: Coding Style Evolution
+
+   Linked List FRP network
+
+   #+BEGIN_SRC haskell
+     mkNetwork ( drawSource
+               , randomSource
+               , genSource
+               , clickSource
+               , keySource ) = do 
+
+       eDraws <- fromAddHandler (addHandler drawSource)
+       eRandoms <- fromAddHandler (addHandler randomSource)
+       eGens <- fromAddHandler (addHandler genSource)
+       eKeys <- fromAddHandler (addHandler keySource)
+
+       let -- some useful collections of event-sources
+           eResets = eRandoms `union` eGens
+           eInputs = eRandoms `union` eGens `union` eKeys
+
+           -- convenience for processing LastInputStates
+           bNothing :: Behavior t (Maybe InputState)
+           bNothing = pure Nothing
+           -- clicking 'draw' should only count if it actually draws
+           bTest :: Behavior t (InputState -> Maybe InputState)
+           bTest = pure (\inState -> case parseInput inState of
+                                       Left _ -> Nothing
+                                       Right _ -> Just inState)
+
+           bInputState = stepper (emptyInput 5 20) eInputs 
+           bLastInputState = 
+             stepper Nothing
+                     ((bTest <@> eDraws) `union` (bNothing <@ eResets))
+           bDirty = mismatches <$> bInputState <*> bLastInputState
+
+       cIn <- changes bInputState
+       cLIn <- changes bLastInputState
+       cDirty <- changes bDirty
+
+       -- Draw the list!
+       reactimate (fmap (\a -> mkCanvas >> process a) eDraws)
+       -- Mark the "dirty" edited cells (or unmark them if clean)
+       reactimate' (fmap (\d -> mark d >> return ()) <$> cDirty)
+
+       -- (These are for debugging purposes and print only to the console)
+       reactimate' $ fmap (\d -> print ("InputState: " ++ show d)) <$> cIn
+       reactimate' $ fmap (\d -> print ("LastState: " ++ show d)) <$> cLIn
+   #+END_SRC
+
+   Tree Rotations FRP network
+
+   #+BEGIN_SRC haskell
+     mkNet (conf,sc,h) iState treeRs newGames clock (tocks,doTock) = 
+       do eRotations <- fromAddHandler treeRs 
+          eNewGames <- fromAddHandler newGames 
+          eTocks <- fromAddHandler tocks
+          let bStopWatch = accumB 0 ((const 0 <$ eNewGames)
+                                     `union` (bWin (+1) <@ eTocks))
+              eTreeUps = fmap (treeUp (conf,sc,h)) eRotations
+              bState = accumB iState (eNewGames `union` eTreeUps)
+              bWin a = (\s -> if not (complete s)
+                                 then a
+                                 else id) <$> bState
+          watchChanges <- changes bStopWatch
+          reactimate' (fmap (rwatch (conf,sc,h)) <$> watchChanges)
+          stateChanges <- changes bState
+          reactimate' (fmap (render (conf,sc,h)) <$> stateChanges)
+   #+END_SRC
+
+   Heap Constructio FRP network
+
+   #+BEGIN_SRC haskell
+     heapGame env iGame gameMs runM = 
+       do eGameMs <- fromAddHandler gameMs
+          let gstate = fst <$> bGameM
+              vstate = snd <$> bGameM
+              bGameM =  accumB iGame (update <$> eGameMs)
+          visuals <- changes vstate
+          reactimate' (fmap sequence_ <$> visuals)
+          return ()
+          
+     type StateModifier = GameState -> Writer [IO ()] GameState
+
+     update :: StateModifier 
+            -> (GameState,[IO ()]) 
+            -> (GameState,[IO ()])
+     update m (gs,_) = runWriter (m gs)
+   #+END_SRC
+
+* What's next?
+
+  - finish up and release *Hyper-Canvas*, start work on *Hyper-DOM* ?
+
+  - Remake Linked List using *Hyper-DOM*
+    
+  - Make some more demos and games!
