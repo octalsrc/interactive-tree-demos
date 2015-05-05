@@ -36,7 +36,7 @@ main = do let n = "main"
                   <*> option n "freeze-frame-delay" 1000
                   <*> option n "animation-frame-delay" 100
           sc <- startCanvas n
-                            (900,500) 
+                            (900,350)
                             s
                             ["main","message","frame","defbuttons"]
                             (const (return ()))
@@ -66,7 +66,7 @@ startHeapGame (sc,conf) =
      writeState env initialGame
      writeS sc "frame" frameForm
 
-frameForm = rekt (15,15) (870,470) False Black
+frameForm = rekt (15,15) (870,320) False Black
 
 restartGame :: Env -> GameState -> StateModifier
 restartGame env newGame _ = tell [writeState env newGame] 
@@ -283,7 +283,7 @@ modInsertNew _ _ s = return s
 
 fitTreeArea :: Env -> SuperForm -> SuperForm
 fitTreeArea env sf = let treeAreaX = 810
-                         ff = fit (45,120) (810,350) sf
+                         ff = fit (45,120) (810,200) sf
                          xv = (fst (snd (bounds ff))) / 2
                      in translate (treeAreaX / 2 - xv + 8,0) ff
 
