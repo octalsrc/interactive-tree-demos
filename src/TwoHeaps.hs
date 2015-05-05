@@ -178,14 +178,16 @@ startGame env gameManips g =
                        (initialGame, [writeState env initialGame])
                        gameManips
                        (runM env)) >>= actuate
-     writeState env initialGame
+     (runM env) ((modFreeNext env) env)
      writeS (sc env) "frame" (combine [mkTitle env (title env), frameForm])
 
 frameForm = rekt (15,15) (870,284) False Black
 
 restartGame :: Env -> GameState2 -> StateModifier
-restartGame env newGame _ = tell [writeState env newGame] 
-                            >> return newGame
+restartGame env newGame _ = ((modFreeNext env) env newGame)
+--   let (newGame',frames) = runWriter 
+--   in tell [frames] 
+--      >> return newGame' 
 
 readNewGame :: Env -> StdGen -> IO GameState2
 readNewGame env g = 
