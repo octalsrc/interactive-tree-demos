@@ -11,9 +11,10 @@ import System.Random
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Super.Canvas
-import Super.Trees
-import Super.Trees2
+import Hyper.Canvas
+
+import Hyper.Trees
+import Hyper.TreesExtra
 
 data Config = Config { useAnimations :: Bool
                      , ordDirection :: Bool
@@ -44,14 +45,14 @@ main = do let n = "main"
 
 type StateModifier = GameState -> Writer [IO ()] GameState
 
-data Env = Env { sc :: SuperCanvas
+data Env = Env { sc :: HyperCanvas
                , conf :: Config
                , runM :: StateModifier -> IO () }
 
 nodesize = (30,40)
 
 
-startHeapGame :: (SuperCanvas,Config) -> IO ()
+startHeapGame :: (HyperCanvas,Config) -> IO ()
 startHeapGame (sc,conf) = 
   do g <- newStdGen
      (gameManips,runManip) <- newAddHandler
@@ -159,12 +160,12 @@ dumbButtons env =
 
 clearDumbButtons env = writeS (sc env) "defbuttons" blank
 
-messageForm :: Color -> String -> SuperForm
+messageForm :: Color -> String -> HyperForm
 messageForm col str = combine [rekt (0,0) (500,30) True col
                               ,rekt (0,0) (500,30) False Black
                               ,text (250,15) (490,15) str]
 
-buttonForm :: String -> Color -> SuperForm
+buttonForm :: String -> Color -> HyperForm
 buttonForm str col = combine [rekt (1,1) (160,30) False Black
                              ,rekt (0,0) (160,30) True col
                              ,rekt (0,0) (160,30) False Black
@@ -281,19 +282,19 @@ modInsertNew env n (Valid h) =
   where state = InsertNew (carelessInsert n h)
 modInsertNew _ _ s = return s
 
-fitTreeArea :: Env -> SuperForm -> SuperForm
+fitTreeArea :: Env -> HyperForm -> HyperForm
 fitTreeArea env sf = let treeAreaX = 810
                          ff = fit (45,120) (810,200) sf
                          xv = (fst (snd (bounds ff))) / 2
                      in translate (treeAreaX / 2 - xv + 8,0) ff
 
-fitControl1 :: Env -> SuperForm -> SuperForm
+fitControl1 :: Env -> HyperForm -> HyperForm
 fitControl1 env = fit (45,35) (150,100)
 
-fitControl2 :: Env -> SuperForm -> SuperForm
+fitControl2 :: Env -> HyperForm -> HyperForm
 fitControl2 env = fit (210,35) (150,100)
 
-fitMessageArea :: Env -> SuperForm -> SuperForm
+fitMessageArea :: Env -> HyperForm -> HyperForm
 fitMessageArea env = fit (375,35) (480,100)
 
 type HeapTree = BiTree (Int, Bool)
@@ -326,13 +327,13 @@ instance DrawableNode (QNode HeapNode Status) where
     in (f,l)
   nodeForm (QNode h BadParent) = qForm h LightRed
 
-qForm :: HeapNode -> Color -> (SuperForm, LineForm) 
+qForm :: HeapNode -> Color -> (HyperForm, LineForm) 
 qForm h c = let (t,line) = nodeForm h
                 r = rekt (-150,-100) (300,200) True c
                 o = rekt (-150,-100) (300,200) False Black
             in (combine [r,o,t], line) 
 
-highlight :: Env -> SuperForm
+highlight :: Env -> HyperForm
 highlight env = combine [circle (-143,-100) 48 True Orange
                         -- ,circle (-143,-100) 41 False Orange
                         -- ,circle (-143,-100) 40 False Orange
@@ -444,7 +445,7 @@ insertNew node g qt =
   ( (\(t,c) -> (BiNode EmptyTree node EmptyTree,c))
   . randomChild g ) qt
 
-format :: SuperForm -> SuperForm
+format :: HyperForm -> HyperForm
 format = translate (50,50)
 
 tryread n s = case readMaybe s of

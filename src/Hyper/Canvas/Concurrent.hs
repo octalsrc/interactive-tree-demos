@@ -1,4 +1,4 @@
-module Super.Canvas.Concurrent ( CState 
+module Hyper.Canvas.Concurrent ( CState 
                                , newCState
                                , stepCState
                                , enqueueDraws ) where
@@ -13,8 +13,8 @@ import Control.Monad
 
 import qualified Data.Map as M
 
-import Super.Canvas.Types
-import Super.Canvas.JS
+import Hyper.Canvas.Types
+import Hyper.Canvas.JS
 
 data DrawChan = DrawChan { drawQ :: TChan [Draw]
                          , delayQ :: TChan Double

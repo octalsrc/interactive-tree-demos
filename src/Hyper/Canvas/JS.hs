@@ -2,7 +2,7 @@
     ForeignFunctionInterface, JavaScriptFFI,
     BangPatterns #-}
 
-module Super.Canvas.JS ( getCanvas
+module Hyper.Canvas.JS ( getCanvas
                        , attachButton
                        , attachField
                        , clearcan
@@ -34,7 +34,7 @@ import Control.Concurrent
 import Control.Applicative
 import Control.Monad
 
-import Super.Canvas.Types
+import Hyper.Canvas.Types
 
 selp = select . pack . ("#" ++)
 

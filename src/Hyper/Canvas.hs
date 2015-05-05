@@ -1,4 +1,4 @@
-module Super.Canvas ( circle
+module Hyper.Canvas ( circle
                     , fit
                     , line
                     , text
@@ -34,9 +34,9 @@ module Super.Canvas ( circle
                     , attachButton
                     , attachField
                     , Color (..)
-                    , SuperCanvas
+                    , HyperCanvas
                     , option
-                    , SuperForm
+                    , HyperForm
                     , startCanvas ) where
 
 import Control.Event.Handler (Handler)
@@ -47,11 +47,11 @@ import Text.Read (readMaybe)
 
 import qualified Data.Map as M
 
-import Super.Canvas.Types
-import Super.Canvas.JS
-import Super.Canvas.Concurrent
+import Hyper.Canvas.Types
+import Hyper.Canvas.JS
+import Hyper.Canvas.Concurrent
 
-data SuperCanvas = SC { scContext :: Context
+data HyperCanvas = SC { scContext :: Context
                       , scHandler :: (Handler [QualAction]) 
                       , scCState  :: CState
                       , scSize    :: BoundingBox }
@@ -61,7 +61,7 @@ startCanvas :: String
             -> String
             -> [String]
             -> Handler Double
-            -> IO (SuperCanvas)
+            -> IO (HyperCanvas)
 startCanvas name size style chans clock = 
   do can <- insertCanvas name size style
   
@@ -105,21 +105,21 @@ tryread n s = case readMaybe s of
                 Just i -> i
                 _ -> n
 
-travel :: Vector -> SuperForm -> SuperForm
+travel :: Vector -> HyperForm -> HyperForm
 travel v = Leaf . Travel v
 
-write :: SuperCanvas -> String -> SuperForm -> IO ()
+write :: HyperCanvas -> String -> HyperForm -> IO ()
 write sc chan sf = animate sc chan 1 0 sf
 
-writeS :: SuperCanvas -> String -> SuperForm -> IO ()
+writeS :: HyperCanvas -> String -> HyperForm -> IO ()
 writeS sc chan sf = animateS sc chan 1 0 sf
 
-animate :: SuperCanvas -> String -> Int -> Int -> SuperForm -> IO ()
+animate :: HyperCanvas -> String -> Int -> Int -> HyperForm -> IO ()
 animate sc chan numFrames delay sf = 
   (scHandler sc) (actions sf) 
   >> enqueueDraws (scCState sc) chan delay (draws numFrames sf)
 
-animateS :: SuperCanvas -> String -> Int -> Int -> SuperForm -> IO ()
+animateS :: HyperCanvas -> String -> Int -> Int -> HyperForm -> IO ()
 animateS sc chan numFrames delay sf = 
   enqueueDraws (scCState sc) chan delay (draws numFrames sf)
 
@@ -129,26 +129,26 @@ checkB (x,y) ((a,b),(w,h),_) = x >= a
                                && y >= b
                                && y <= (b + h) 
 
-blank :: SuperForm
+blank :: HyperForm
 blank = Node []
 
 isBlank (Node []) = True
 isBlank _ = False
 
-fit :: Location -> BoundingBox -> SuperForm -> SuperForm
+fit :: Location -> BoundingBox -> HyperForm -> HyperForm
 fit l (w,h) s = let ((sx,sy),(sw,sh)) = bounds s 
                     nf = minimum [ 1 -- never scale up
                                  , (w / (sw + sx))
                                  , (h / (sh + sy))] 
                 in (translate (l) . scale (nf,nf)) s
 
-circle :: Location -> Double -> Bool -> Color -> SuperForm
+circle :: Location -> Double -> Bool -> Color -> HyperForm
 circle loc rad fill col = primElev loc 
                                    (loc - (rad,rad)) 
                                    (rad * 2, rad * 2) 
                                    (Circle rad fill col)
 
-line :: Location -> Vector -> Double -> Color -> SuperForm
+line :: Location -> Vector -> Double -> Color -> HyperForm
 line loc dest thick col = 
   let minx = min (fst loc) (fst (loc + dest))
       miny = min (snd loc) (snd (loc + dest))
@@ -157,43 +157,43 @@ line loc dest thick col =
       box = (maxx, maxy) - (minx, miny)
   in primElev loc (minx, miny) box (Line dest thick col)
 
-text :: Location -> BoundingBox -> String -> SuperForm
+text :: Location -> BoundingBox -> String -> HyperForm
 text loc box str = 
   primElev loc 
            (loc - (box / (2,2))) 
            box 
            (Text box str)
 
-rekt :: Location -> BoundingBox -> Bool -> Color -> SuperForm
+rekt :: Location -> BoundingBox -> Bool -> Color -> HyperForm
 rekt loc box fill col = 
   primElev loc loc box (Rekt box fill col)
 
-combine :: [SuperForm] -> SuperForm
+combine :: [HyperForm] -> HyperForm
 combine = Node . fmap pullUp
 
 -- the purpose here is to cull unnecessary node-nesting
-pullUp :: SuperForm -> SuperForm
+pullUp :: HyperForm -> HyperForm
 pullUp (Node ((Node n):[])) = Node n
 pullUp n = n
 
-scale :: Factor -> SuperForm -> SuperForm
+scale :: Factor -> HyperForm -> HyperForm
 scale f = Leaf . Scale f
 
-translate :: Vector -> SuperForm -> SuperForm
+translate :: Vector -> HyperForm -> HyperForm
 translate v = Leaf . Trans v 
 
-onClick :: [IO ()] -> Location -> BoundingBox -> SuperForm
+onClick :: [IO ()] -> Location -> BoundingBox -> HyperForm
 onClick ios l b =
   Leaf (Trans l (Leaf (Elem (Trigger b (fmap OnClick ios)))))
 
-addOnClick :: [IO ()] -> SuperForm -> SuperForm
+addOnClick :: [IO ()] -> HyperForm -> HyperForm
 addOnClick ios sc = 
   let b = bounds sc
       a = onClick ios (fst b) (snd b)
   in combine [sc, a]
 
 primElev :: Location -> Location -> BoundingBox -> Primitive 
-         -> SuperForm
+         -> HyperForm
 primElev loc boxloc box prim = 
   Node [ Leaf (Trans loc (Leaf (Elem (Prim prim))))
        , Leaf (Trans boxloc (Leaf (Elem (Bounds box))))]

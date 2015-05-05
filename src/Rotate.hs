@@ -10,8 +10,8 @@ import qualified Data.Map as M
 import qualified Data.Char as C
 import qualified Data.List as L
 
-import Super.Canvas
-import Super.Trees
+import Hyper.Canvas
+import Hyper.Trees
 
 treeAreaSize = (800, 195)
 
@@ -29,7 +29,7 @@ data Config = Config { canvasWidth :: Double
                      , newGameButtonID :: String
                      , currentSeedID :: String }
 
-prep :: IO (SuperCanvas, Config, AddHandler Double)
+prep :: IO (HyperCanvas, Config, AddHandler Double)
 prep = do let n = "main"
               s = "background: lightgray;"
           conf <- Config
@@ -59,7 +59,7 @@ main = prep >>= treestuff
 data NewGame = NewGame { ngNumNodes :: Int
                        , ngSeed :: Int     }
 
-type Env = (Config, SuperCanvas, Handler TreeR)
+type Env = (Config, HyperCanvas, Handler TreeR)
 
 readNewGame :: Env -> IO (GameState -> GameState)     
 readNewGame (conf,sc,h) = 
@@ -76,7 +76,7 @@ readNewGame (conf,sc,h) =
 
 data GameState = GameState { gsRefTree :: ColorTree
                            , gsWorkTree :: ColorTree
-                           , gsForm :: SuperForm
+                           , gsForm :: HyperForm
                            , gsMoveCount :: Int }
 
 genTrees :: NewGame -> (ColorTree, ColorTree)
@@ -177,7 +177,7 @@ render (conf,sc,h) gs =
         then (sequence_ . fmap (animate sc "main" frames 42)) sf
         else (sequence_ . fmap (write sc "main")) sf
 
-format :: Env -> GameState -> (Bool,[SuperForm])
+format :: Env -> GameState -> (Bool,[HyperForm])
 format (conf,sc,h) gs =
   let (fitRef, fitWork, fitMoves, fitWin, fitTime) = 
         layouts (conf,sc,h)
@@ -205,14 +205,14 @@ format (conf,sc,h) gs =
 rwatch :: Env -> Int -> IO ()
 rwatch (conf,sc,h) t = writeS sc "stopwatch" (rformat (conf,sc,h) t)
 
-rformat :: Env -> Int -> SuperForm
+rformat :: Env -> Int -> HyperForm
 rformat (conf,sc,h) t = let (_,_,_,_,fitTime) = layouts (conf,sc,h)
                             message = timestring t
                         in if gameMode conf
                               then fitTime (infoTab "-- Time --" message) 
                               else blank
 
-infoTab :: String -> String -> SuperForm
+infoTab :: String -> String -> HyperForm
 infoTab name info = combine [rekt (0,0) (200,90) False Black
                             ,translate (100,15)
                                        (text (0,0)

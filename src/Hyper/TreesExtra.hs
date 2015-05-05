@@ -1,7 +1,7 @@
-module Super.Trees2 where
+module Hyper.TreesExtra where
 
-import Super.Canvas
-import Super.Trees
+import Hyper.Canvas
+import Hyper.Trees
 
 data EditTree a = EditTree { etTree :: (ZTree a) } deriving Show
 
@@ -125,16 +125,16 @@ downHeapRZ mark (ZTree (BiNode l v (BiNode s u r)) c) =
   ztRight (ZTree (BiNode l (mark u) (BiNode s v r)) c)
 downHeapRZ _ et = et
 
-type NodeForm a = (ZTree a -> (SuperForm, LineForm))
+type NodeForm a = (ZTree a -> (HyperForm, LineForm))
 
-type LineForm = (Location -> SuperForm)
+type LineForm = (Location -> HyperForm)
 
 type Embedding a = (ZTree a -> Location)
 
-toForm :: BoundingBox -> Embedding a -> NodeForm a -> BiTree a -> SuperForm
+toForm :: BoundingBox -> Embedding a -> NodeForm a -> BiTree a -> HyperForm
 toForm bb a b c = nextNode bb a b (zTop c)
 
-nextNode :: BoundingBox -> Embedding a -> NodeForm a -> ZTree a -> SuperForm
+nextNode :: BoundingBox -> Embedding a -> NodeForm a -> ZTree a -> HyperForm
 nextNode bb findLoc nodeForm zt = 
   case zt of
     ZTree (BiNode _ _ _) _ -> 
@@ -152,7 +152,7 @@ nextNode bb findLoc nodeForm zt =
     _ -> blank
 
 class DrawableNode n where
-  nodeForm :: n -> (SuperForm, LineForm)
+  nodeForm :: n -> (HyperForm, LineForm)
 
 instance DrawableNode a => DrawableNode (ZTree a) where
   nodeForm (ZTree (BiNode _ v _) _) = nodeForm v

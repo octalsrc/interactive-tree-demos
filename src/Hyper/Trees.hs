@@ -1,4 +1,4 @@
-module Super.Trees ( BiTree (..)
+module Hyper.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
                    , btSequence
@@ -41,10 +41,10 @@ import Control.Event.Handler (Handler)
 import System.Random
 import qualified Data.List as L
 
-import Super.Canvas
+import Hyper.Canvas
 
 data TreeR = TreeR { trTree :: ColorTree
-                   , trForm :: SuperForm }
+                   , trForm :: HyperForm }
 
 type ColorTree = BiTree (Bool, Color)
 
@@ -206,12 +206,12 @@ confSize'' = (confSize * 2, confSize * 2)
 
 prepHeapTree :: Handler (BiTree (Int,Bool))
              -> BiTree (Int,Bool)
-             -> SuperForm
+             -> HyperForm
 prepHeapTree f tree = travHeap f (top tree)
 
 travHeap :: Handler (BiTree (Int,Bool)) 
          -> QualTree (Int,Bool)
-         -> SuperForm
+         -> HyperForm
 travHeap fire (BiNode l (intn,bl) r, c) = 
   let qt = (BiNode l (intn,bl) r, c)
       loc = findLoc qt
@@ -236,13 +236,13 @@ upheap (BiNode ll (intn) rr, Top) = (BiNode ll intn rr, Top)
 prepTree :: Handler TreeR 
          -> Color
          -> BiTree (Bool, Color) 
-         -> SuperForm
+         -> HyperForm
 prepTree f lcol tree = trav f lcol (top tree)
 
 trav :: Handler TreeR 
      -> Color
      -> QualTree (Bool, Color)
-     -> SuperForm
+     -> HyperForm
 trav fire lcol (BiNode l (True,col) r, c) = 
   let qt = (BiNode l (True,col) r, c)
       loc = findLoc qt
@@ -328,7 +328,7 @@ findX qt = case qt of
           let x' = nextX x l 
           in nextX (x' + 1) r
 
-sketchHeapNode :: Bool -> Int -> Location -> [IO ()] -> SuperForm
+sketchHeapNode :: Bool -> Int -> Location -> [IO ()] -> HyperForm
 sketchHeapNode bl col ploc acs = 
   let rcolor = if bl
                   then Yellow
@@ -346,7 +346,7 @@ sketchHeapNode bl col ploc acs =
                      , tex ]
 
 
-sketchNode :: Color -> Color -> Location -> [IO ()] -> SuperForm
+sketchNode :: Color -> Color -> Location -> [IO ()] -> HyperForm
 sketchNode lcol col ploc acs = 
   let circ = circle idLocation confSize True col
   in combine [ line idLocation ploc 2 lcol

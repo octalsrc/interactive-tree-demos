@@ -1,4 +1,4 @@
-import Super.Canvas
+import Hyper.Canvas
 import Control.Concurrent (threadDelay)
 
 main = startCanvas "main" 

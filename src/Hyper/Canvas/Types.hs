@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Super.Canvas.Types ( Primitive (..)
+module Hyper.Canvas.Types ( Primitive (..)
                           , SCLeaf (..)
                           , SCElem (..)
                           , QElem (..)
-                          , SuperForm (..) 
+                          , HyperForm (..) 
                           , Factor (..)
                           , idFactor
                           , actions
@@ -24,12 +24,12 @@ module Super.Canvas.Types ( Primitive (..)
 import System.Random
 import qualified Data.List as L
 
-data SuperForm = Node [SuperForm]
+data HyperForm = Node [HyperForm]
                | Leaf SCLeaf
 
-data SCLeaf = Scale Factor SuperForm
-            | Trans Vector SuperForm
-            | Travel Vector SuperForm
+data SCLeaf = Scale Factor HyperForm
+            | Trans Vector HyperForm
+            | Travel Vector HyperForm
             | Elem SCElem
 
 data SCElem = Prim Primitive
@@ -38,14 +38,14 @@ data SCElem = Prim Primitive
 
 type QElem = (Location, Factor, Vector, SCElem)
 
-qList :: Int -> SuperForm -> [QElem]
+qList :: Int -> HyperForm -> [QElem]
 qList numFrames = r initLoc initFactor initVector
   where initLoc = (0,0)
         initFactor = (1,1)
         initVector = (0,0)
         nf = numFrames
 
-        r :: Location -> Factor -> Vector -> SuperForm -> [QElem]
+        r :: Location -> Factor -> Vector -> HyperForm -> [QElem]
         r pl pf pv (Node scs) = 
           foldr (\a -> (++) (r pl pf pv a)) [] scs
         r pl pf pv (Leaf (Trans l sc)) = r (pl + (l * pf)) pf pv sc
@@ -58,7 +58,7 @@ calcFrame nf v = v / (fromIntegral nf, fromIntegral nf)
 
 type Draw = (Location, Primitive)
 
-draws :: Int -> SuperForm -> [[Draw]]
+draws :: Int -> HyperForm -> [[Draw]]
 draws nf = L.transpose . fmap (mult nf) . fmap scalePrim' . prims nf
 
 mult :: Int -> (Location, Vector, Primitive) -> [Draw]
@@ -73,14 +73,14 @@ scalePrim' :: (Location, Factor, Vector, Primitive)
            -> (Location, Vector, Primitive)
 scalePrim' (l,f,v,p) = (l, v, scalePrim f p)
 
-prims :: Int ->  SuperForm -> [(Location, Factor, Vector, Primitive)]
+prims :: Int ->  HyperForm -> [(Location, Factor, Vector, Primitive)]
 prims nf = f . qList nf
   where f = foldr (\e as -> 
                      case e of
                        (l,f,v,(Prim p)) -> (l,f,v,p) : as
                        _ -> as) []
 
-actions :: SuperForm -> [QualAction]
+actions :: HyperForm -> [QualAction]
 actions = concat . f . qList 1
   where f = foldr (\e as -> 
                      case e of
@@ -89,7 +89,7 @@ actions = concat . f . qList 1
                        _ -> as) []
         q l b = fmap (\a -> (l,b,a))
 
-bounds :: SuperForm -> (Location, BoundingBox)
+bounds :: HyperForm -> (Location, BoundingBox)
 bounds sc = 
   let bs = foldr (\e as -> 
                  case e of
