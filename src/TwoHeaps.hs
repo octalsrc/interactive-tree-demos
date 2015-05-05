@@ -8,6 +8,7 @@ import Reactive.Banana
 import Reactive.Banana.Frameworks
 
 import Control.Monad.Writer.Lazy
+import Control.Monad.Trans.State.Lazy
 import Control.Monad.Trans.Maybe
 import Data.Monoid
 import Text.Read (readMaybe)
@@ -134,8 +135,8 @@ modValidate env (Construction n zt) =
       (m,trace) = validateM env et
   in tell [visualize env 100 1000 "Validating..." trace] 
      >> case m of
-          Just h -> let state = GameOver2 n True
-                    in tell [writeState env state] >> return state
+          True -> let state = GameOver2 n True
+                  in tell [writeState env state] >> return state
           _ -> let state = GameOver2 n False
                in tell [writeState env state] >> return state
 
@@ -459,6 +460,7 @@ instance DrawableNode (QNode HeapNode Status) where
         l = (\ploc -> line (0,0) ploc 4 Red)
     in (f,l)
   nodeForm (QNode h BadParent) = qForm h LightRed
+  nodeForm (QNode h BadBoth) = nodeForm (QNode h BadChild)
 
 qForm :: HeapNode -> Color -> (SuperForm, LineForm) 
 qForm h c = let (t,line) = nodeForm h
@@ -485,7 +487,8 @@ data Status = Unchecked
             | OfInterest
             | Marker
             | Good 
-            | BadChild 
+            | BadChild
+            | BadBoth
             | BadParent deriving (Show)
 
 setQ :: q -> QNode a s -> QNode a q
@@ -601,28 +604,34 @@ makeQ q a = QNode a q
 --           (comp v u) && valid v l && valid v r
 --         valid _ _ = True
 
-stamp :: s -> ZTree (QNode a s) -> ZTree (QNode a s)
+stamp :: Status -> ZTree (QNode a Status) -> ZTree (QNode a Status)
+stamp BadParent (ZTree (BiNode l (QNode v BadChild) r) c) = 
+  ZTree (BiNode l (QNode v BadBoth) r) c
 stamp s (ZTree (BiNode l (QNode v _) r) c) = 
   ZTree (BiNode l (QNode v s) r) c
 stamp _ t = t
 
-type Validator a = MaybeT (Writer (VTrace a Status)) 
-                          (ZTree (QNode a Status))
+type Validator a = StateT Bool (Writer (VTrace a Status)) (ZTree (QNode a Status))
 
 type VTrace a b = [ZTree (QNode a b)]
 
 -- validateM :: Ord a 
 --           => (EditTree (QNode a s)) 
 --           -> (Maybe (Heap a), VTrace a Status)
-validateM :: Ord a => Env -> (EditTree (QNode a NodeStatus)) -> (Maybe (Heap a), VTrace a Status)
+validateM :: Ord a => Env -> (EditTree (QNode a NodeStatus)) -> (Bool, VTrace a Status)
 validateM env (EditTree t) = 
   case nt of
     (ZTree (BiNode _ _ _) _) -> 
-      let (res,trace) = runWriter (runMaybeT (markValid nt >>= check))
-      in (fmap (Heap . zTree . ztUpMost . fmap qVal) res 
+      let ((res,win),trace) = runWriter (runStateT (markValid nt >>= check) True)
+      in (win
          ,trace)
-    _ -> (Just (Heap EmptyTree), [])
+    _ -> (True, [])
   where nt = (fmap (setQ Unchecked) . ztUpMost) t
+
+passGood True = True
+passGood b = b
+
+passBad _ = False
 
 check :: Ord a => ZTree (QNode a Status) -> Validator a
 check zt = ztUp <$> case zt of
@@ -650,89 +659,90 @@ markValid zt = let nxt = (ztUp . stamp Good) zt
                in tell [nxt] >> return nxt
 
 markFail :: Ord a => ZTree (QNode a Status) -> Validator a
-markFail zt = let nxt = (stamp BadParent 
+markFail zt = let 
+                  nxt = (stamp BadParent 
                          . ztUp 
                          . stamp BadChild) zt
-              in tell [nxt] >> fail "Invalid Heap"
+              in tell [nxt] >> modify passBad >> return nxt
 
-type ValidateM a = Env -> (EditTree (QNode a Focus)) -> (Maybe (Heap a), VTrace a Status)
-
--- validateInsertM :: Ord a 
---                 => (EditTree (QNode a Focus))
---                 -> (Maybe (Heap a), VTrace a Status)
-validateInsertM :: Ord a => ValidateM a
-validateInsertM env (EditTree t) = 
-  case nt of
-    ZTree (BiNode _ _ _) _ -> 
-      let (res,trace) = runWriter (runMaybeT (checkUp env nt))
-      in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
-    _ -> (Just (Heap EmptyTree), [])
-  where nt = (fmap path2Interest . lastElem . Heap . zTree . ztUpMost) t
-
-path2Interest :: QNode a Focus -> QNode a Status
-path2Interest (QNode n Focused) = QNode n Marker
-path2Interest (QNode n OnPath) = QNode n OfInterest
-path2Interest (QNode n _) = QNode n Unchecked
-
-checkUp :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
-checkUp env zt = 
-  case zt of 
-    ZTree (BiNode _ (QNode v OfInterest) _) (L u _ _) -> 
-      evalNodes (QNode v OfInterest) u >>= (checkUp env . ztUp)
-    ZTree (BiNode _ (QNode v OfInterest) _) (R _ u _) -> 
-      evalNodes (QNode v OfInterest) u >>= (checkUp env . ztUp)
-    ZTree (BiNode _ (QNode v Marker) _) (L u _ _) -> 
-      evalNodes (QNode v Marker) u
-    ZTree (BiNode _ (QNode v Marker) _) (R _ u _) -> 
-      evalNodes (QNode v Marker) u
-    _ -> return zt
-  where evalNodes v u = if compare' u v
-                           then markValid' zt
-                           else markFail' zt
-        markValid' zt = let nxt = stamp Good zt
-                        in tell [nxt] >> return nxt
-        markFail' zt = let nxt = (stamp BadParent
-                                  . ztUp
-                                  . stamp BadChild) zt
-                       in tell [nxt] >> fail "Invalid Heap"
-        compare' = if ordDirection (conf env)
-                      then (<=)
-                      else (>)
-
-validateRemoveM :: Ord a => ValidateM a
-validateRemoveM env (EditTree t) = 
-  case nt of
-    ZTree (BiNode _ _ _) _ -> 
-      let (res,trace) = runWriter (runMaybeT (checkAround env nt))
-      in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
-    _ -> (Just (Heap EmptyTree), [])
-  where nt = fmap (setQ Unchecked) t
-
-checkAround :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
-checkAround env zt = case zt of
-                       ZTree (BiNode _ v _) Top -> 
-                         do evalTree v (ztLeft zt)
-                            zt2 <- ztUp <$> markValid' (ztLeft zt)
-                            evalTree v (ztRight zt2) 
-                            zt3 <- ztUp <$> markValid' (ztRight zt2)
-                            markValid' zt3
-                       ZTree (BiNode _ v _) _ -> 
-                         do evalTree v (ztLeft zt)
-                            zt2 <- ztUp <$> markValid' (ztLeft zt)
-                            evalTree v (ztRight zt2)
-                            zt3 <- ztUp <$> markValid' (ztRight zt2)
-                            markValid' zt3 >>= (checkAround env . ztUp)
-  where evalTree u (ZTree EmptyTree _) = return ()
-        evalTree u (ZTree (BiNode l v r) c) 
-          = if compare' u v
-               then return ()
-               else markFail' (ZTree (BiNode l v r) c)
-        markValid' zt = let nxt = stamp Good zt
-                        in tell [nxt] >> return nxt
-        markFail' zt = let nxt = (stamp BadParent
-                                  . ztUp
-                                  . stamp BadChild) zt
-                       in tell [nxt] >> fail "Invalid Heap"
-        compare' = if ordDirection (conf env)
-                      then (<=)
-                      else (>)
+-- type ValidateM a = Env -> (EditTree (QNode a Focus)) -> (Maybe (Heap a), VTrace a Status)
+-- 
+-- -- validateInsertM :: Ord a 
+-- --                 => (EditTree (QNode a Focus))
+-- --                 -> (Maybe (Heap a), VTrace a Status)
+-- validateInsertM :: Ord a => ValidateM a
+-- validateInsertM env (EditTree t) = 
+--   case nt of
+--     ZTree (BiNode _ _ _) _ -> 
+--       let (res,trace) = runWriter (runMaybeT (checkUp env nt))
+--       in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
+--     _ -> (Just (Heap EmptyTree), [])
+--   where nt = (fmap path2Interest . lastElem . Heap . zTree . ztUpMost) t
+-- 
+-- path2Interest :: QNode a Focus -> QNode a Status
+-- path2Interest (QNode n Focused) = QNode n Marker
+-- path2Interest (QNode n OnPath) = QNode n OfInterest
+-- path2Interest (QNode n _) = QNode n Unchecked
+-- 
+-- checkUp :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
+-- checkUp env zt = 
+--   case zt of 
+--     ZTree (BiNode _ (QNode v OfInterest) _) (L u _ _) -> 
+--       evalNodes (QNode v OfInterest) u >>= (checkUp env . ztUp)
+--     ZTree (BiNode _ (QNode v OfInterest) _) (R _ u _) -> 
+--       evalNodes (QNode v OfInterest) u >>= (checkUp env . ztUp)
+--     ZTree (BiNode _ (QNode v Marker) _) (L u _ _) -> 
+--       evalNodes (QNode v Marker) u
+--     ZTree (BiNode _ (QNode v Marker) _) (R _ u _) -> 
+--       evalNodes (QNode v Marker) u
+--     _ -> return zt
+--   where evalNodes v u = if compare' u v
+--                            then markValid' zt
+--                            else markFail' zt
+--         markValid' zt = let nxt = stamp Good zt
+--                         in tell [nxt] >> return nxt
+--         markFail' zt = let nxt = (stamp BadParent
+--                                   . ztUp
+--                                   . stamp BadChild) zt
+--                        in tell [nxt] >> fail "Invalid Heap"
+--         compare' = if ordDirection (conf env)
+--                       then (<=)
+--                       else (>)
+-- 
+-- validateRemoveM :: Ord a => ValidateM a
+-- validateRemoveM env (EditTree t) = 
+--   case nt of
+--     ZTree (BiNode _ _ _) _ -> 
+--       let (res,trace) = runWriter (runMaybeT (checkAround env nt))
+--       in (fmap (Heap . zTree . ztUpMost . fmap qVal) res, trace)
+--     _ -> (Just (Heap EmptyTree), [])
+--   where nt = fmap (setQ Unchecked) t
+-- 
+-- checkAround :: Ord a => Env -> ZTree (QNode a Status) -> Validator a
+-- checkAround env zt = case zt of
+--                        ZTree (BiNode _ v _) Top -> 
+--                          do evalTree v (ztLeft zt)
+--                             zt2 <- ztUp <$> markValid' (ztLeft zt)
+--                             evalTree v (ztRight zt2) 
+--                             zt3 <- ztUp <$> markValid' (ztRight zt2)
+--                             markValid' zt3
+--                        ZTree (BiNode _ v _) _ -> 
+--                          do evalTree v (ztLeft zt)
+--                             zt2 <- ztUp <$> markValid' (ztLeft zt)
+--                             evalTree v (ztRight zt2)
+--                             zt3 <- ztUp <$> markValid' (ztRight zt2)
+--                             markValid' zt3 >>= (checkAround env . ztUp)
+--   where evalTree u (ZTree EmptyTree _) = return ()
+--         evalTree u (ZTree (BiNode l v r) c) 
+--           = if compare' u v
+--                then return ()
+--                else markFail' (ZTree (BiNode l v r) c)
+--         markValid' zt = let nxt = stamp Good zt
+--                         in tell [nxt] >> return nxt
+--         markFail' zt = let nxt = (stamp BadParent
+--                                   . ztUp
+--                                   . stamp BadChild) zt
+--                        in tell [nxt] >> fail "Invalid Heap"
+--         compare' = if ordDirection (conf env)
+--                       then (<=)
+--                       else (>)
