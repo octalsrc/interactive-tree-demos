@@ -1,6 +1,7 @@
 module Super.Trees ( BiTree (..)
                    , QualTree (..)
                    , BTContext (..)
+                   , btSequence
                    , randomTree
                    , makeHeap
                    , heapInsert
@@ -22,6 +23,7 @@ module Super.Trees ( BiTree (..)
                    , qtReplace
 
                    , ZTree (..)
+                   , zSequence
                    , zTop
                    , ztUp
                    , ztLeft
@@ -121,6 +123,10 @@ instance Functor BiTree where
 leaf :: a -> BiTree a
 leaf a = BiNode EmptyTree a EmptyTree
 
+btSequence :: BiTree a -> [a]
+btSequence EmptyTree = []
+btSequence (BiNode l v r) = btSequence l ++ [v] ++ btSequence r
+
 data BTContext a = Top
                  | L a (BTContext a) (BiTree a)
                  | R (BiTree a) a (BTContext a)
@@ -138,6 +144,8 @@ data ZTree a = ZTree { zTree :: (BiTree a)
 
 instance Functor ZTree where
   fmap f (ZTree t c) = ZTree (fmap f t) (fmap f c)
+
+zSequence = btSequence . zTree . ztUpMost
 
 ztLeft   (ZTree (BiNode l v r) c)   = ZTree l (L v c r)
 ztLeft   zt                         = zt
